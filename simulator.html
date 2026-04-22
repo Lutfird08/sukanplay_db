@@ -140,7 +140,7 @@
             { t: 'A', type: 'pick', id: 'pick-a-5' }, { t: 'B', type: 'pick', id: 'pick-b-5' }
         ];
 
-        let currentTurn = 0;
+        let heroSequenceMap = [];
         let selectedHeroes = [];
 
         // Fungsi Pembersih Nama (Menghapus spasi dan jadikan huruf kecil)
@@ -185,6 +185,7 @@
             
             slot.style.background = turnInfo.type === 'ban' ? '#450a0a' : '#1e3a8a';
             
+            heroSequenceMap.push({ hero: name, step: turnInfo });
             selectedHeroes.push(name);
             document.getElementById(`hero-${name}`).classList.add('disabled');
 
@@ -224,28 +225,28 @@
         }
 
         function lanjutKeLog() {
-            // 1. Ambil data PICK (yang sudah ada sebelumnya)
-            // Asumsi: kamu menyimpannya dalam bentuk string yang dipisah koma
-            const stringPicksA = /* ... cara kamu ambil hero pick Tim A ... */;
-            const stringPicksB = /* ... cara kamu ambil hero pick Tim B ... */;
+            const picksA = [], picksB = [], bansA = [], bansB = [];
 
-            // 2. KODE BARU: Ambil data BAN
-            // Jika di simulator kamu Ban disimpan di array, gabungkan dengan .join(', ')
-            // Jika di input text, cukup ambil .value-nya
-            const stringBansA = /* ... cara kamu ambil hero ban Tim A ... */; 
-            const stringBansB = /* ... cara kamu ambil hero ban Tim B ... */;
+        // Looping langsung dari map yang sudah kita buat, ini jauh lebih aman
+        heroSequenceMap.forEach((entry) => {
+            const heroName = entry.hero;
+            const step = entry.step;
 
-            // 3. Masukkan semuanya ke dalam koper draftHasil
+            if (step.t === 'A' && step.type === 'pick') picksA.push(heroName);
+            if (step.t === 'B' && step.type === 'pick') picksB.push(heroName);
+            if (step.t === 'A' && step.type === 'ban') bansA.push(heroName);
+            if (step.t === 'B' && step.type === 'ban') bansB.push(heroName);
+        });
+
             const draftHasil = {
-                teamAHeroes: stringPicksA,
-                teamBHeroes: stringPicksB,
-                teamABans: stringBansA, // 👈 INI YANG SEBELUMNYA HILANG!
-                teamBBans: stringBansB  // 👈 INI YANG SEBELUMNYA HILANG!
+                teamAHeroes: picksA.join(', '),
+                teamBHeroes: picksB.join(', '),
+                teamABans: bansA.join(', '),
+                teamBBans: bansB.join(', ')
             };
-
-            // Simpan ke LocalStorage dan pindah ke Tracker
-            localStorage.setItem('draftHasil', JSON.stringify(draftHasil));
-            window.location.href = 'tracker.html';
+    
+        localStorage.setItem('draftHasil', JSON.stringify(draftHasil));
+        window.location.href = 'tracker.html';
         }
 
         init();
