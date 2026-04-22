@@ -276,6 +276,73 @@
         function tutupModal() {
             document.getElementById('seriesModal').style.display = 'none';
         }
+        
+        // Asumsi 'data' adalah array hasil balasan dari API server.js
+        function renderHistory(data) {
+            // 1. Lakukan Grouping dengan reduce
+            const groupedMatches = data.reduce((acc, match) => {
+                
+                // TRIK RAHASIA: Urutkan nama tim sesuai abjad (A-Z).
+                // Ini memastikan (EVOS vs RRQ) dan (RRQ vs EVOS) akan menghasilkan string yang sama persis.
+            const sortedTeams = [match.team_a_name, match.team_b_name].sort().join(' vs ');
+
+                // Buat kunci unik untuk series ini
+                // Contoh hasil: "22 Apr 2026_MPL Season 13_EVOS vs RRQ"
+            const seriesKey = `${match.formatted_date}_${match.competition_name}_${sortedTeams}`;
+
+                // Jika kunci belum ada di object, buat array kosong
+                if (!acc[seriesKey]) {
+                    acc[seriesKey] = {
+                        title: `${match.competition_name} - ${match.formatted_date}`,
+                        matchup: sortedTeams,
+                        games: []
+                    };
+                }
+
+                // Masukkan data match ke dalam array games di series tersebut
+                acc[seriesKey].games.push(match);
+
+                return acc;
+            }, {});
+
+            // 2. Tampilkan ke HTML (Contoh implementasi)
+            const container = document.getElementById('historyContainer');
+            container.innerHTML = '';
+
+            // Looping object hasil grouping tadi
+            Object.values(groupedMatches).forEach(series => {
+                // Buat elemen pembungkus untuk 1 Series (BO3/BO5)
+                const seriesCard = document.createElement('div');
+                seriesCard.className = 'series-card';
+                
+                // Header Series (Bisa dipakai sebagai judul card)
+                seriesCard.innerHTML = `
+                    <h3>${series.title}</h3>
+                    <h4>${series.matchup}</h4>
+                    <div class="games-list"></div>
+                `;
+
+                const gamesList = seriesCard.querySelector('.games-list');
+
+                // Looping setiap game (Game 1, Game 2, dst) di dalam series tersebut
+                series.games.forEach((game, index) => {
+                    // Karena kita mengambil data history ORDER BY match_time DESC di backend,
+                    // index 0 biasanya adalah game terakhir (misal Game 3). 
+                    // Jika ingin urut Game 1 -> Game 3, gunakan reverse() sebelum forEach.
+                    
+                    const gameItem = document.createElement('div');
+                    gameItem.className = 'game-item';
+                    gameItem.innerHTML = `
+                        <p><strong>Game:</strong> ${game.team_a_name} (${game.score_a}) vs (${game.score_b}) ${game.team_b_name}</p>
+                        <p>Pemenang: ${game.winner_name || 'Belum Ditentukan'}</p>
+                        <p>Waktu: ${game.match_time}</p>
+                    `;
+                    gamesList.appendChild(gameItem);
+                });
+
+                container.appendChild(seriesCard);
+            });
+        }
     </script>
 </body>
 </html>
