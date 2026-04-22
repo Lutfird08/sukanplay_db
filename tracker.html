@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Live Tracker & Role Assignment</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { background-color: #1e293b; padding: 20px; border-radius: 12px; max-width: 1000px; margin: 0 auto; border-top: 4px solid #ef4444; position: relative;}
+        
+        .header-match { display: flex; justify-content: space-between; text-align: center; background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155;}
+        .team-a { color: #3b82f6; } .team-b { color: #ef4444; }
+        
+        /* Layar 1: Ruang Ganti */
+        #assignmentScreen { margin-bottom: 20px; }
+        .assign-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        .assign-box { background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; }
+        .player-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; background: #1e293b; padding: 10px; border-radius: 6px; }
+        .player-info { display: flex; align-items: center; font-weight: bold; font-size: 14px; }
+        select.hero-select { padding: 8px; background: #0f172a; color: white; border: 1px solid #3b82f6; border-radius: 4px; width: 150px; }
+
+        /* Layar 2: Live Tracker */
+        #trackerScreen { display: none; }
+        #timerDisplay { text-align: center; font-size: 3.5rem; font-family: monospace; font-weight: bold; color: #fff; margin: 10px 0; }
+        
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: #0f172a; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #334155; vertical-align: middle; }
+        th { background: #1e293b; font-size: 12px; text-transform: uppercase; color: #94a3b8; }
+        td.player-cell { text-align: left; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .hero-img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #334155; object-fit: cover; }
+        
+        .btn-submit { width: 100%; padding: 15px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        
+        /* Modals & Timeline */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; }
+        .modal-content { background: #1e293b; max-width: 600px; margin: 40px auto; padding: 25px; border-radius: 12px; border: 1px solid #3b82f6; }
+        select.modal-select { width: 100%; padding: 10px; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; margin-top: 5px; margin-bottom: 15px;}
+        .assist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #0f172a; padding: 10px; border-radius: 6px; margin-bottom: 15px;}
+        .timeline-container { background: #0f172a; padding: 15px; border-radius: 8px; height: 150px; overflow-y: auto; margin-bottom: 20px; font-size: 13px;}
+
+        /* Quick Action Panel CSS */
+        .quick-action-panel { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; transition: background 0.2s; }
+        .qa-title { text-align: center; color: #94a3b8; font-size: 12px; margin-bottom: 12px; font-weight: bold; letter-spacing: 1px; }
+        .btn-quick { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; font-size: 12px; transition: transform 0.1s; display: flex; justify-content: center; align-items: center; gap: 5px;}
+        .btn-quick:active { transform: scale(0.95); }
+        .kill-home { background: #3b82f6; color: white; }
+        .kill-away { background: #ef4444; color: white; }
+        .obj-home { background: #172554; color: #93c5fd; border: 1px solid #3b82f6; }
+        .obj-away { background: #450a0a; color: #fca5a5; border: 1px solid #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="assignmentScreen">
+            <h3 style="text-align: center; color: #3b82f6;">TAHAP 3A: RUANG GANTI (PENEMPATAN ROLE)</h3>
+            <p style="text-align: center; color: #94a3b8; font-size: 14px; margin-bottom: 10px;">Pasangkan 5 Hero hasil Draft ke masing-masing Pemain.</p>
+            
+            <div class="assign-grid">
+                <div class="assign-box">
+                    <h4 class="team-a" id="assignTeamA" style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Tim Home</h4>
+                    <div id="listAssignA"></div>
+                </div>
+                <div class="assign-box">
+                    <h4 class="team-b" id="assignTeamB" style="margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 5px;">Tim Away</h4>
+                    <div id="listAssignB"></div>
+                </div>
+            </div>
+            <button onclick="kunciStrategi()" class="btn-submit" style="margin-top: 20px;">KUNCI STRATEGI & MASUK ARENA ➡</button>
+        </div>
+
+        <div id="trackerScreen">
+            <h3 style="text-align: center; color: #ef4444;">TAHAP 3B: PRO LIVE TRACKER</h3>
+            
+            <div id="timerDisplay">00:00</div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button id="btnStart" onclick="toggleTimer()" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">START MATCH</button>
+            </div>
+
+            <div class="header-match">
+                <h2 class="team-a" id="dispTeamA">Tim Home</h2>
+                <h2 style="color: #fff;" id="skorBesar">0 - 0</h2>
+                <h2 class="team-b" id="dispTeamB">Tim Away</h2>
+            </div>
+
+            <div class="dashboard-grid">
+                <div>
+                    <table id="tableA">
+                        <thead><tr><th>Pemain Home</th><th>K</th><th>D</th><th>A</th></tr></thead>
+                        <tbody id="tbodyA"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <table id="tableB">
+                        <thead><tr><th>Pemain Away</th><th>K</th><th>D</th><th>A</th></tr></thead>
+                        <tbody id="tbodyB"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="quick-action-panel">
+                <div class="qa-title">⚡ QUICK ACTIONS (1-CLICK RECORD)</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-quick kill-home" onclick="bukaModalKill('A')">⚔️ HOME KILL</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-quick obj-home" onclick="simpanObjInstan('A', 'Turtle')">🐢 Turtle</button>
+                            <button class="btn-quick obj-home" onclick="simpanObjInstan('A', 'Lord')">👑 Lord</button>
+                            <button class="btn-quick obj-home" onclick="simpanObjInstan('A', 'Tower')">🗼 Tower</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-quick kill-away" onclick="bukaModalKill('B')">⚔️ AWAY KILL</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-quick obj-away" onclick="simpanObjInstan('B', 'Turtle')">🐢 Turtle</button>
+                            <button class="btn-quick obj-away" onclick="simpanObjInstan('B', 'Lord')">👑 Lord</button>
+                            <button class="btn-quick obj-away" onclick="simpanObjInstan('B', 'Tower')">🗼 Tower</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="timeline-container" id="timelineList"><div style="color: #64748b; text-align: center; margin-top: 10px;">Timeline kosong...</div></div>
+
+            <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #eab308; margin-bottom: 20px;">
+                <label style="color: #eab308; font-weight: bold; display: block; margin-bottom: 10px; text-align: center;">🏆 HASIL AKHIR 🏆</label>
+                <label style="color: #94a3b8; font-size: 13px; margin-bottom: 5px; display: block;">Tim yang Menghancurkan Base:</label>
+                <select id="pemenangMatch" class="modal-select">
+                    <option value="">-- Pilih Pemenang --</option>
+                    <option value="Tim A">Tim Home</option>
+                    <option value="Tim B">Tim Away</option>
+                </select>
+                <textarea id="notesAkhir" placeholder="Evaluasi draft, momen penentu..." style="width: 100%; padding: 15px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; height: 80px;"></textarea>
+            </div>
+
+            <button onclick="bukaReviewModal()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px;">
+                🛑 SELESAI PERTANDINGAN (REVIEW LOG)
+            </button>
+        </div>
+    </div>
+
+    <button onclick="quickPin()" id="btnQuickPin" style="position: fixed; bottom: 30px; left: 30px; width: 70px; height: 70px; border-radius: 50%; background: #eab308; color: #0f172a; font-weight: bold; border: 4px solid #0f172a; cursor: pointer; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: transform 0.1s;">
+        ⚡<br>PIN
+    </button>
+
+    <div id="modalKill" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 20px; text-align: center; color: #ef4444;">Form Detail Kill</h3>
+            <select id="selectKiller" class="modal-select" onchange="updateAssistOptions()"></select>
+            <select id="selectVictim" class="modal-select"></select>
+            <label style="color: #3b82f6;">Siapa yang membantu? (Assists)</label>
+            <div class="assist-grid" id="assistCheckboxes"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="simpanKill()" style="flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Simpan</button>
+                <button onclick="tutupModal()" style="flex: 1; padding: 12px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="reviewModal" style="display: none; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; padding: 30px; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; border-top: 4px solid #3b82f6;">
+            <h2 style="color: white; margin-bottom: 10px;">📋 Review Game <span id="reviewGameNumber"></span></h2>
+            
+            <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 20px; font-weight: bold; font-size: 24px;">
+                <span style="color: #3b82f6;" id="reviewScoreA">Home: 0</span>
+                <span style="color: #94a3b8;">VS</span>
+                <span style="color: #ef4444;" id="reviewScoreB">Away: 0</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="color: #eab308; margin: 0;">📝 Edit Timeline Log:</h4>
+                <button onclick="tambahLogManual()" style="padding: 5px 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">+ Tambah Log Manual</button>
+            </div>
+
+            <div id="reviewLogContainer" style="background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 20px; max-height: 250px; overflow-y: auto;">
+                </div>
+
+            <div id="seriesStatusContainer" style="margin-bottom: 20px; padding: 15px; background: #334155; border-radius: 8px; text-align: center;">
+                <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 5px;">Status Series (<span id="reviewBoFormat"></span>)</div>
+                <div style="font-size: 18px; font-weight: bold; color: white;" id="reviewSeriesScore">Home 0 - 0 Away</div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="document.getElementById('reviewModal').style.display='none'" style="padding: 10px 15px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer;">Batal (Ke Game)</button>
+                <button onclick="simpanDanLanjutSeries()" id="btnLanjutSeries" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Simpan & Lanjut ➡</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="nextGameModal" style="display: none; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; padding: 30px; border-radius: 12px; width: 100%; max-width: 400px; border-top: 4px solid #10b981; z-index: 3000;">
+            <h3 style="color: white; margin-bottom: 20px; text-align: center;">🎮 Setup Game Berikutnya</h3>
+            
+            <label style="color: #94a3b8; font-size: 12px;">Pilih Map</label>
+            <select id="nextMap" class="modal-select">
+                <option value="Dangerous Grass">Dangerous Grass</option>
+                <option value="Broken Walls">Broken Walls</option>
+                <option value="Flying Cloud">Flying Cloud</option>
+                <option value="Expanding Rivers">Expanding Rivers</option>
+            </select>
+
+            <label style="color: #94a3b8; font-size: 12px;">Pilih Tim First Pick</label>
+            <select id="nextFirstPick" class="modal-select"></select>
+
+            <button onclick="eksekusiLanjutGame()" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px;">Lanjut ke Draft Simulator ➡</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // INISIALISASI DATA
+        // ==========================================
+        const roleData = [
+            { name: "EXP Lane", icon: "assets/roles/exp.png" },
+            { name: "Jungle", icon: "assets/roles/jungle.png" },
+            { name: "Mid Lane", icon: "assets/roles/mid.png" },
+            { name: "Gold Lane", icon: "assets/roles/gold.png" },
+            { name: "Roam", icon: "assets/roles/roam.png" }
+        ];
+
+        const matchSetup = JSON.parse(localStorage.getItem('matchSetup')) || {};
+        const draftHasil = JSON.parse(localStorage.getItem('draftHasil')) || {};
+        
+        // SAFEGUARD: Beri nilai default string kosong jika data draft tidak ditemukan
+        const safeHeroesA = draftHasil.teamAHeroes || "";
+        const safeHeroesB = draftHasil.teamBHeroes || "";
+        
+        const heroesA = safeHeroesA ? safeHeroesA.split(',').map(h => h.trim()) : [];
+        const heroesB = safeHeroesB ? safeHeroesB.split(',').map(h => h.trim()) : [];
+
+        window.onload = function() {
+            if(matchSetup.playersA) {
+                document.getElementById('assignTeamA').innerText = matchSetup.teamA;
+                document.getElementById('assignTeamB').innerText = matchSetup.teamB;
+                document.getElementById('dispTeamA').innerText = matchSetup.teamA;
+                document.getElementById('dispTeamB').innerText = matchSetup.teamB;
+
+                renderAssignmentList('A', matchSetup.playersA, heroesA);
+                renderAssignmentList('B', matchSetup.playersB, heroesB);
+            }
+        };
+
+        // ==========================================
+        // LAYAR 1: RUANG GANTI
+        // ==========================================
+        function renderAssignmentList(teamCode, playersData, heroList) {
+            const container = document.getElementById(`listAssign${teamCode}`);
+            container.innerHTML = '';
+
+            let heroOptions = `<option value="">-- Pilih Hero --</option>`;
+            heroList.forEach(h => { if(h) heroOptions += `<option value="${h}">${h}</option>`; });
+            let roleOptionsHTML = roleData.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
+            playersData.forEach((playerObj, index) => {
+                container.innerHTML += `
+                    <div class="player-row">
+                        <div class="player-info" style="flex: 1;">
+                            <div style="font-weight: bold; margin-bottom: 5px;">${playerObj.ign}</div>
+                            <select id="roleSelect${teamCode}${index}" class="role-select-minimal" style="width: 100%; padding: 5px; font-size: 11px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;">
+                                ${roleOptionsHTML}
+                            </select>
+                        </div>
+                        <div style="flex: 1.5;">
+                            <select id="heroSelect${teamCode}${index}" class="hero-select" style="width: 100%;">
+                                ${heroOptions}
+                            </select>
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => { document.getElementById(`roleSelect${teamCode}${index}`).value = playerObj.role; }, 10);
+            });
+        }
+        
+        function kunciStrategi() {
+            players = []; 
+            const processTeam = (teamCode, dataSetup) => {
+                for(let i=0; i<5; i++) {
+                    const hSelect = document.getElementById(`heroSelect${teamCode}${i}`);
+                    const rSelect = document.getElementById(`roleSelect${teamCode}${i}`);
+                    if(!hSelect || !hSelect.value) return false;
+
+                    const selectedRole = roleData.find(r => r.name === rSelect.value) || roleData[4];
+                    players.push({ 
+                        name: dataSetup[i].ign, team: teamCode, k: 0, d: 0, a: 0, 
+                        role: selectedRole, heroName: hSelect.value, 
+                        heroImg: `assets/heroes/${hSelect.value.replace(/\s+/g, '').toLowerCase()}.png` 
+                    });
+                }
+                return true;
+            };
+
+            if(!processTeam('A', matchSetup.playersA)) return alert("Lengkapi Tim Home!");
+            if(!processTeam('B', matchSetup.playersB)) return alert("Lengkapi Tim Away!");
+
+            const urutanRole = { 'EXP Lane': 1, 'Jungle': 2, 'Mid Lane': 3, 'Gold Lane': 4, 'Roam': 5 };
+            players.sort((a, b) => urutanRole[a.role.name] - urutanRole[b.role.name]);
+            
+            document.getElementById('assignmentScreen').style.display = 'none';
+            document.getElementById('trackerScreen').style.display = 'block';
+            renderTables();
+        }
+
+        // ==========================================
+        // LAYAR 2: LIVE TRACKER & TIMER
+        // ==========================================
+        let seconds = 0, timerInterval = null;
+        function toggleTimer() {
+            const btn = document.getElementById('btnStart');
+            if (timerInterval) {
+                clearInterval(timerInterval); timerInterval = null;
+                btn.innerText = "RESUME"; btn.style.background = "#eab308";
+            } else {
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    let m = Math.floor(seconds / 60); let s = seconds % 60;
+                    document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                }, 1000);
+                btn.innerText = "MATCH ON"; btn.style.background = "#ef4444";
+            }
+        }
+
+        function renderTables() {
+            const tbA = document.getElementById('tbodyA'); const tbB = document.getElementById('tbodyB');
+            tbA.innerHTML = ''; tbB.innerHTML = '';
+            
+            players.forEach(p => {
+                const tr = `
+                <tr>
+                    <td class="player-cell">
+                        <img src="${p.role.icon}" width="15px" title="${p.role.name}" onerror="this.style.display='none'">
+                        <img src="${p.heroImg}" class="hero-img" title="${p.heroName}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'40\\' height=\\'40\\'><circle cx=\\'20\\' cy=\\'20\\' r=\\'20\\' fill=\\'%23334155\\'/></svg>'">
+                        <div style="line-height: 1.2;">
+                            <div>${p.name}</div>
+                            <div style="font-size: 10px; color: #94a3b8; font-weight: normal;">${p.heroName}</div>
+                        </div>
+                    </td>
+                    <td>${p.k}</td><td>${p.d}</td><td>${p.a}</td>
+                </tr>`;
+                if(p.team === 'A') tbA.innerHTML += tr; else tbB.innerHTML += tr;
+            });
+            document.getElementById('skorBesar').innerText = `${skorA} - ${skorB}`;
+        }
+
+        // --- RENDER TIMELINE (DENGAN TOMBOL HAPUS) ---
+        function renderTimeline() {
+            const container = document.getElementById('timelineList');
+            if (timelineEvents.length === 0) {
+                container.innerHTML = '<div style="color: #64748b; text-align: center; margin-top: 10px;">Timeline kosong...</div>';
+                return;
+            }
+
+            container.innerHTML = timelineEvents.slice().reverse().map((ev, originalIdx) => {
+                const idx = timelineEvents.length - 1 - originalIdx;
+                let color = '#3b82f6';
+                if(ev.type === 'Kill') color = '#ef4444';
+                if(ev.type === 'Objektif') color = '#eab308';
+                if(ev.type === 'Pin' || ev.type === 'Manual') color = '#10b981';
+
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:8px; border-bottom:1px solid #1e293b; padding-bottom:5px">
+                        <div>
+                            <span style="color:#3b82f6;">${ev.time}</span> | 
+                            <span style="color:${color};">[${ev.type}]</span> ${ev.event}
+                        </div>
+                        <button onclick="hapusLog(${idx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:11px; font-weight:bold;">[Hapus]</button>
+                    </div>`;
+            }).join('');
+        }
+
+        // --- HAPUS LOG & SINKRONISASI SKOR KDA ---
+        function hapusLog(index) {
+            const log = timelineEvents[index];
+            const cleanEventName = log.event.replace(/<[^>]*>?/gm, ''); // Hilangkan tag HTML untuk alert
+            const yakin = confirm(`Hapus log: "${cleanEventName}"? Skor dan statistik akan dikembalikan.`);
+            if (!yakin) return;
+
+            // Jika yang dihapus adalah Kill, kembalikan skor KDA
+            if (log.type === 'Kill') {
+                if (log.team === 'A') skorA--; else skorB--;
+                
+                const killer = players.find(p => p.name === log.killerName);
+                if(killer) killer.k--;
+                
+                const victim = players.find(p => p.name === log.victimName);
+                if(victim) victim.d--;
+                
+                if (log.assistNames) {
+                    log.assistNames.forEach(name => {
+                        const asst = players.find(p => p.name === name);
+                        if(asst) asst.a--;
+                    });
+                }
+            }
+
+            timelineEvents.splice(index, 1);
+            renderTables();
+            renderTimeline();
+        }
+
+        // ==========================================
+        // QUICK ACTIONS (1-CLICK INSTANT RECORD)
+        // ==========================================
+        
+        function simpanObjInstan(teamCode, objType) {
+            if(!timerInterval && seconds === 0) return alert("Mulai timer dulu!");
+            const time = document.getElementById('timerDisplay').innerText;
+            const teamName = teamCode === 'A' ? matchSetup.teamA : matchSetup.teamB;
+            
+            timelineEvents.push({ 
+                time: time, 
+                type: 'Objektif', 
+                event: `<b>${teamName}</b> mengamankan ${objType}`,
+                team: teamCode
+            });
+            
+            renderTimeline();
+            
+            // Efek Flash
+            const panel = document.querySelector('.quick-action-panel');
+            const originalBg = panel.style.background;
+            panel.style.background = teamCode === 'A' ? '#1e3a8a' : '#450a0a';
+            setTimeout(() => panel.style.background = originalBg, 150);
+        }
+
+        function bukaModalKill(killerTeamCode) {
+            if(!timerInterval && seconds===0) return alert("Mulai timer dulu!");
+            const selK = document.getElementById('selectKiller');
+            selK.innerHTML = '<option value="">-- Pilih Killer --</option>';
+            
+            // Filter cerdas: Hanya tampilkan pemain dari tim yang menekan tombol
+            players.filter(p => p.team === killerTeamCode).forEach(p => {
+                selK.innerHTML += `<option value="${p.name}">${p.name} (${p.heroName})</option>`;
+            });
+            
+            document.getElementById('selectVictim').innerHTML = '';
+            document.getElementById('assistCheckboxes').innerHTML = '';
+            document.getElementById('modalKill').style.display = 'block';
+        }
+
+        function updateAssistOptions() {
+            const killerName = document.getElementById('selectKiller').value;
+            const victimSelect = document.getElementById('selectVictim');
+            const assistDiv = document.getElementById('assistCheckboxes');
+            victimSelect.innerHTML = ''; assistDiv.innerHTML = '';
+            if(!killerName) return;
+
+            const killer = players.find(p => p.name === killerName);
+            // Victim dari tim lawan
+            players.filter(p => p.team !== killer.team).forEach(v => victimSelect.innerHTML += `<option value="${v.name}">${v.name} (${v.heroName})</option>`);
+            // Assist dari tim yang sama
+            players.filter(p => p.team === killer.team && p.name !== killer.name).forEach(a => assistDiv.innerHTML += `<label><input type="checkbox" value="${a.name}" class="chk-assist"> ${a.name}</label>`);
+        }
+
+        function simpanKill() {
+            const kName = document.getElementById('selectKiller').value;
+            const vName = document.getElementById('selectVictim').value;
+            if(!kName || !vName) return alert("Pilih Killer dan Victim!");
+
+            const kP = players.find(p => p.name === kName);
+            const vP = players.find(p => p.name === vName);
+            kP.k += 1; vP.d += 1;
+            
+            // Simpan info pemenang untuk Hapus Log
+            const teamWinner = kP.team; 
+            if(teamWinner === 'A') skorA += 1; else skorB += 1;
+
+            let assisters = [];
+            document.querySelectorAll('.chk-assist:checked').forEach(chk => {
+                assisters.push(chk.value);
+                players.find(p => p.name === chk.value).a += 1;
+            });
+
+            const time = document.getElementById('timerDisplay').innerText;
+            let detailStr = `${kName} kill ${vName}`;
+            if(assisters.length > 0) detailStr += ` (Assist: ${assisters.join(', ')})`;
+            
+            timelineEvents.push({ 
+                time: time, 
+                type: 'Kill', 
+                event: detailStr, 
+                team: teamWinner,
+                killerName: kName,
+                victimName: vName,
+                assistNames: assisters
+            });
+            
+            renderTables(); renderTimeline(); tutupModal();
+        }
+
+        function tutupModal() {
+            document.getElementById('modalKill').style.display = 'none';
+        }
+
+        // ==========================================
+        // FITUR QUICK PIN & TAMBAH MANUAL
+        // ==========================================
+        function quickPin() {
+            const time = document.getElementById('timerDisplay').innerText;
+            timelineEvents.push({ time: time, type: 'Pin', event: "📍 MOMEN PENTING (Ubah Teks Ini)" });
+            
+            const btn = document.getElementById('btnQuickPin');
+            btn.style.transform = 'scale(1.2)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 150);
+            
+            renderTimeline();
+        }
+
+        function tambahLogManual() {
+            const waktu = prompt("Masukkan Waktu (Contoh 12:30):", document.getElementById('timerDisplay').innerText);
+            const isi = prompt("Masukkan Kejadian:", "Momen penting lainnya...");
+            if (waktu && isi) {
+                timelineEvents.push({ time: waktu, type: 'Manual', event: isi });
+                bukaReviewModal(); // Auto-refresh Modal Review
+            }
+        }
+
+        // ==========================================
+        // ALUR REVIEW & SERIES MANAGEMENT
+        // ==========================================
+        function hapusLogDariReview(index) {
+            // Amankan teks yang sedang diedit sebelum merender ulang
+            timelineEvents.forEach((ev, i) => {
+                const inputEl = document.getElementById(`editLogText_${i}`);
+                if (inputEl) timelineEvents[i].event = inputEl.value;
+            });
+            
+            hapusLog(index); // Panggil fungsi hapus log utama
+            bukaReviewModal(); // Render ulang Review Screen
+        }
+
+        function bukaReviewModal() {
+            if(timerInterval) toggleTimer(); // Pause otomatis saat direview
+
+            document.getElementById('reviewGameNumber').innerText = matchSetup.currentGame || 1;
+            document.getElementById('reviewScoreA').innerText = `${matchSetup.teamA} (${skorA})`;
+            document.getElementById('reviewScoreB').innerText = `${matchSetup.teamB} (${skorB})`;
+            
+            const logContainer = document.getElementById('reviewLogContainer');
+            logContainer.innerHTML = '';
+            
+            if(timelineEvents.length === 0) {
+                logContainer.innerHTML = "<div style='color: #94a3b8; text-align: center;'>Tidak ada aktivitas log.</div>";
+            } else {
+                timelineEvents.forEach((ev, idx) => {
+                    const isPinned = ev.type === 'Pin' || ev.type === 'Manual'; 
+                    const borderStyle = isPinned ? 'border: 2px solid #eab308;' : 'border: 1px solid #334155;';
+                    const safeText = ev.event.replace(/<b>/g, '').replace(/<\/b>/g, '').replace(/"/g, '&quot;');
+                    
+                    logContainer.innerHTML += `
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+                            <input type="text" value="${ev.time}" disabled style="width: 60px; padding: 5px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;">
+                            <input type="text" value="${safeText}" id="editLogText_${idx}" style="flex: 1; padding: 8px; background: #1e293b; color: white; ${borderStyle} border-radius: 4px;">
+                            <button onclick="hapusLogDariReview(${idx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; font-weight:bold;" title="Hapus Log">🗑️</button>
+                        </div>
+                    `;
+                });
+            }
+
+            let tempSeriesA = matchSetup.seriesScoreA || 0;
+            let tempSeriesB = matchSetup.seriesScoreB || 0;
+            
+            const pemenangSelect = document.getElementById('pemenangMatch').value;
+            if (pemenangSelect === 'Tim A') tempSeriesA++;
+            else if (pemenangSelect === 'Tim B') tempSeriesB++;
+
+            const format = matchSetup.matchFormat || 1;
+            const winThreshold = Math.ceil(format / 2);
+            
+            document.getElementById('reviewBoFormat').innerText = `BO${format}`;
+            document.getElementById('reviewSeriesScore').innerText = `${matchSetup.teamA} ${tempSeriesA} - ${tempSeriesB} ${matchSetup.teamB}`;
+
+            const btnLanjut = document.getElementById('btnLanjutSeries');
+            if (tempSeriesA >= winThreshold || tempSeriesB >= winThreshold) {
+                btnLanjut.innerText = "🏆 Simpan & Akhiri Series";
+                btnLanjut.style.background = "#eab308";
+                btnLanjut.style.color = "#0f172a";
+                btnLanjut.setAttribute('data-action', 'end');
+            } else {
+                btnLanjut.innerText = "Simpan & Lanjut Game " + ((matchSetup.currentGame || 1) + 1) + " ➡";
+                btnLanjut.style.background = "#10b981";
+                btnLanjut.style.color = "white";
+                btnLanjut.setAttribute('data-action', 'next');
+            }
+
+            document.getElementById('reviewModal').style.display = 'flex';
+        }
+
+        async function simpanDanLanjutSeries() {
+            const pemenangSelect = document.getElementById('pemenangMatch').value;
+            if (!pemenangSelect) {
+                alert("Harap pilih Tim yang menghancurkan base (Pemenang Game) sebelum menyimpan!");
+                document.getElementById('reviewModal').style.display = 'none';
+                return;
+            }
+
+            timelineEvents.forEach((ev, idx) => {
+                const inputEl = document.getElementById(`editLogText_${idx}`);
+                if (inputEl) {
+                    timelineEvents[idx].event = inputEl.value;
+                    if(timelineEvents[idx].type === 'Pin') timelineEvents[idx].type = 'Log'; 
+                }
+            });
+
+            let idWinner = null;
+            if (pemenangSelect === 'Tim A') { idWinner = matchSetup.teamAId; matchSetup.seriesScoreA++; } 
+            else if (pemenangSelect === 'Tim B') { idWinner = matchSetup.teamBId; matchSetup.seriesScoreB++; }
+
+            localStorage.setItem('matchSetup', JSON.stringify(matchSetup));
+
+            const payload = {
+                competitionId: matchSetup.competitionId, 
+                patchId: matchSetup.patchId,             
+                matchDate: matchSetup.matchDate, 
+                matchTime: matchSetup.matchTime,
+                teamAId: matchSetup.teamAId,             
+                teamBId: matchSetup.teamBId,             
+                teamAHeroes: draftHasil.teamAHeroes, 
+                teamBHeroes: draftHasil.teamBHeroes,
+                teamABans: draftHasil.teamABans || "",
+                teamBBans: draftHasil.teamBBans || "",
+                scoreA: skorA, scoreB: skorB,
+                winnerId: idWinner,
+                notes: `[Game ${matchSetup.currentGame} | Map: ${matchSetup.map}] ` + document.getElementById('notesAkhir').value,
+                timelineEvents: timelineEvents,
+                playerStats: players,
+                teamKills: skorA, teamDeaths: skorB, 
+                teamAssists: players.filter(p => p.team === 'A').reduce((sum, p) => sum + p.a, 0)
+            };
+
+            const prosesPindahLayar = () => {
+                const action = document.getElementById('btnLanjutSeries').getAttribute('data-action');
+                if (action === 'end') {
+                    alert('Seri Berakhir! Kembali ke Riwayat.');
+                    window.location.href = 'riwayat.html';
+                } else {
+                    document.getElementById('reviewModal').style.display = 'none';
+                    document.getElementById('nextFirstPick').innerHTML = `
+                        <option value="A">Home (${matchSetup.teamA})</option>
+                        <option value="B">Away (${matchSetup.teamB})</option>
+                    `;
+                    document.getElementById('nextGameModal').style.display = 'flex';
+                }
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/simpan-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    prosesPindahLayar(); // Server hidup, eksekusi normal
+                } else {
+                    throw new Error("Server mengembalikan status gagal.");
+                }
+            } catch (error) {
+                console.error("Error Simpan:", error);
+                
+                // OFFLINE FALLBACK: Simpan ke koper darurat di LocalStorage
+                let offlineBackups = JSON.parse(localStorage.getItem('offlineBackups')) || [];
+                offlineBackups.push(payload);
+                localStorage.setItem('offlineBackups', JSON.stringify(offlineBackups));
+                
+                alert('⚠️ Server Offline/Gagal!\nData sementara disimpan di memori perangkat. Anda tetap bisa melanjutkan series.');
+                
+                // Paksa tetap lanjut agar flow turnamen tidak terhenti
+                prosesPindahLayar(); 
+            }
+        }
+
+        function eksekusiLanjutGame() {
+            matchSetup.currentGame++;
+            matchSetup.map = document.getElementById('nextMap').value;
+            matchSetup.firstPick = document.getElementById('nextFirstPick').value;
+            localStorage.setItem('matchSetup', JSON.stringify(matchSetup));
+            window.location.href = 'simulator.html';
+        }
+    </script>
+</body>
+</html>

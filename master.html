@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Data Management</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { background-color: #1e293b; padding: 30px; border-radius: 12px; max-width: 900px; margin: 0 auto; border-top: 4px solid #eab308; }
+        
+        .header { text-align: center; margin-bottom: 30px; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        
+        .card { background: #0f172a; padding: 20px; border-radius: 8px; border: 1px solid #334155; }
+        .card h3 { color: #eab308; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: #94a3b8; }
+        input, select { width: 100%; padding: 10px; background: #1e293b; border: 1px solid #3b82f6; color: white; border-radius: 6px; }
+        
+        .btn-submit { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-submit:hover { background: #2563eb; }
+        .nav-link { display: inline-block; margin-bottom: 20px; color: #eab308; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" class="nav-link">⬅ Kembali ke Dashboard Setup</a>
+        
+        <div class="header">
+            <h2>⚙️ Data Center (Master Data)</h2>
+            <p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Daftarkan Tim, Pemain, Kompetisi, dan Patch di sini.</p>
+        </div>
+
+        <div class="grid-layout">
+            <div class="card">
+                <h3>🏆 Tambah Kompetisi</h3>
+                <form id="formKompetisi" onsubmit="submitKompetisi(event)">
+                    <div class="form-group">
+                        <label>Nama Turnamen/Event</label>
+                        <input type="text" id="compName" placeholder="Contoh: MPL ID S13, Scrim Vagos" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tingkat (Tier)</label>
+                        <select id="compTier">
+                            <option value="S-Tier">S-Tier (MPL, M-World, MSC)</option>
+                            <option value="A-Tier">A-Tier (MDL, Liga Nasional)</option>
+                            <option value="B-Tier">B-Tier (Turnamen Komunitas/Lokal)</option>
+                            <option value="Scrim">Scrim (Sesi Latihan)</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit">Simpan Kompetisi</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>🎮 Tambah Versi Patch</h3>
+                <form id="formPatch" onsubmit="submitPatch(event)">
+                    <div class="form-group">
+                        <label>Versi Patch</label>
+                        <input type="text" id="patchVersion" placeholder="Contoh: 1.8.78" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi Singkat</label>
+                        <input type="text" id="patchDesc" placeholder="Contoh: Assassin Meta, Nerf Tank">
+                    </div>
+                    <button type="submit" class="btn-submit">Simpan Patch</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>🛡️ Tambah Tim</h3>
+                <form id="formTim" onsubmit="submitTim(event)">
+                    <div class="form-group">
+                        <label>Nama Tim Lengkap</label>
+                        <input type="text" id="teamName" placeholder="Contoh: ONIC Esports" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Singkatan (Acronym)</label>
+                        <input type="text" id="teamAcronym" placeholder="Contoh: ONIC" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Simpan Tim</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>👤 Tambah Pemain Roster</h3>
+                <form id="formPemain" onsubmit="submitPemain(event)">
+                    <div class="form-group">
+                        <label>Pilih Tim</label>
+                        <select id="playerTeam" required>
+                            <option value="">-- Memuat Data Tim... --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>In-Game Name (IGN)</label>
+                        <input type="text" id="playerIgn" placeholder="Contoh: Sanz, Kairi" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Role Utama</label>
+                        <select id="playerRole">
+                            <option value="EXP Lane">EXP Lane</option>
+                            <option value="Jungle">Jungle</option>
+                            <option value="Mid Lane">Mid Lane</option>
+                            <option value="Gold Lane">Gold Lane</option>
+                            <option value="Roam">Roam</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit">Simpan Pemain</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fungsi untuk mengambil daftar Tim dari database dan memasukkannya ke Dropdown
+        async function loadTeams() {
+            try {
+                const response = await fetch('http://localhost:3000/api/teams');
+                const teams = await response.json();
+                const select = document.getElementById('playerTeam');
+                select.innerHTML = '<option value="">-- Pilih Tim --</option>';
+                teams.forEach(t => {
+                    select.innerHTML += `<option value="${t.id}">${t.name} (${t.acronym})</option>`;
+                });
+            } catch (error) {
+                console.error("Gagal memuat tim:", error);
+            }
+        }
+
+        // Panggil fungsi memuat tim saat halaman pertama kali dibuka
+        window.onload = loadTeams;
+
+        // --- FUNGSI SUBMIT FORM ---
+        async function postData(url, data) {
+            const response = await fetch(`http://localhost:3000/api/${url}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            alert(result.message || "Berhasil disimpan!");
+        }
+
+        async function submitKompetisi(e) {
+            e.preventDefault();
+            await postData('competitions', { 
+                name: document.getElementById('compName').value, 
+                region: 'ID', 
+                tier: document.getElementById('compTier').value 
+            });
+            document.getElementById('formKompetisi').reset();
+        }
+
+        async function submitPatch(e) {
+            e.preventDefault();
+            await postData('patches', { 
+                version: document.getElementById('patchVersion').value, 
+                description: document.getElementById('patchDesc').value 
+            });
+            document.getElementById('formPatch').reset();
+        }
+
+        async function submitTim(e) {
+            e.preventDefault();
+            await postData('teams', { 
+                name: document.getElementById('teamName').value, 
+                acronym: document.getElementById('teamAcronym').value 
+            });
+            document.getElementById('formTim').reset();
+            loadTeams(); // Perbarui dropdown tim setelah tim baru ditambah
+        }
+
+        async function submitPemain(e) {
+            e.preventDefault();
+            await postData('players', { 
+                team_id: document.getElementById('playerTeam').value, 
+                ign: document.getElementById('playerIgn').value, 
+                full_name: "", // Opsional
+                main_role: document.getElementById('playerRole').value 
+            });
+            document.getElementById('formPemain').reset();
+        }
+    </script>
+</body>
+</html>

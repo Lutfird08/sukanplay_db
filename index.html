@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Esports Tracker - Setup</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { background-color: #1e293b; padding: 30px; border-radius: 12px; max-width: 800px; margin: 0 auto; border-top: 4px solid #10b981; }
+        
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #10b981; }
+        
+        .card { background: #0f172a; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: #94a3b8; font-weight: bold; }
+        select, input[type="date"], input[type="time"] { width: 100%; padding: 12px; background: #1e293b; border: 1px solid #3b82f6; color: white; border-radius: 6px; }
+        
+        .roster-list { margin-top: 10px; font-size: 13px; color: #cbd5e1; background: #1e293b; padding: 10px; border-radius: 6px; border: 1px dashed #334155; min-height: 80px;}
+        .roster-item { display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding: 4px 0; }
+        
+        .btn-submit { width: 100%; padding: 15px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-submit:hover { background: #059669; }
+        .nav-link { display: block; text-align: center; margin-top: 20px; color: #eab308; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>TAHAP 1: SETUP PERTANDINGAN</h1>
+            <p>Sistem Terintegrasi Database Master</p>
+        </div>
+
+        <div class="card grid-2">
+            <div class="form-group">
+                <label>Kompetisi / Event</label>
+                <select id="selectComp"><option value="">Memuat...</option></select>
+            </div>
+            <div class="form-group">
+                <label>Patch Game</label>
+                <select id="selectPatch"><option value="">Memuat...</option></select>
+            </div>
+            <div class="form-group">
+                <label>Tanggal Match</label>
+                <input type="date" id="matchDate" required>
+            </div>
+            <div class="form-group">
+                <label>Waktu (Jam)</label>
+                <input type="time" id="matchTime" style="border-color: #eab308;" required>
+            </div>
+            <div class="form-group">
+                <label>Format Series</label>
+                <select id="matchFormat">
+                    <option value="1">Best of 1 (BO1)</option>
+                    <option value="3" selected>Best of 3 (BO3)</option>
+                    <option value="5">Best of 5 (BO5)</option>
+                    <option value="7">Best of 7 (BO7)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Pilih Map (Game 1)</label>
+                <select id="selectMap">
+                    <option value="Dangerous Grass">Dangerous Grass</option>
+                    <option value="Broken Walls">Broken Walls</option>
+                    <option value="Flying Cloud">Flying Cloud</option>
+                    <option value="Expanding Rivers">Expanding Rivers</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>First Pick (Game 1)</label>
+                <select id="firstPick">
+                    <option value="A">Tim Home (Kiri)</option>
+                    <option value="B">Tim Away (Kanan)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card" style="border-top: 3px solid #3b82f6;">
+                <label style="color: #3b82f6; font-size: 16px;">Pilih Tim Home</label>
+                <select id="selectTeamA" onchange="loadRoster('A')"><option value="">-- Pilih Tim Home --</option></select>
+                <div class="roster-list" id="rosterA">Roster akan muncul di sini...</div>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #ef4444;">
+                <label style="color: #ef4444; font-size: 16px;">Pilih Tim Away</label>
+                <select id="selectTeamB" onchange="loadRoster('B')"><option value="">-- Pilih Tim Away --</option></select>
+                <div class="roster-list" id="rosterB">Roster akan muncul di sini...</div>
+            </div>
+        </div>
+
+        <button onclick="mulaiMatch()" class="btn-submit">LANJUT KE DRAFT SIMULATOR ➡</button>
+        <a href="master.html" class="nav-link">⚙️ Kelola Data Tim & Pemain (Master Data)</a>
+    </div>
+
+    <script>
+        // Set tanggal hari ini otomatis
+        document.getElementById('matchDate').valueAsDate = new Date();
+        
+        let playersA = [];
+        let playersB = [];
+
+        // --- Fetch Data dari Database saat halaman dimuat ---
+        async function fetchDropdowns() {
+            try {
+                const [compRes, patchRes, teamRes] = await Promise.all([
+                    fetch('http://localhost:3000/api/competitions'),
+                    fetch('http://localhost:3000/api/patches'),
+                    fetch('http://localhost:3000/api/teams')
+                ]);
+
+                const comps = await compRes.json();
+                const patches = await patchRes.json();
+                const teams = await teamRes.json();
+
+                populateSelect('selectComp', comps, 'Pilih Kompetisi', c => `<option value="${c.id}">${c.name}</option>`);
+                populateSelect('selectPatch', patches, 'Pilih Patch', p => `<option value="${p.id}">${p.version}</option>`);
+                
+                const teamHTML = teams.map(t => `<option value="${t.id}" data-name="${t.name}">${t.name} (${t.acronym})</option>`).join('');
+                document.getElementById('selectTeamA').innerHTML = '<option value="">-- Pilih Tim A --</option>' + teamHTML;
+                document.getElementById('selectTeamB').innerHTML = '<option value="">-- Pilih Tim B --</option>' + teamHTML;
+
+            } catch (err) {
+                console.error("Gagal memuat API:", err);
+                alert("Gagal terhubung ke database. Pastikan server.js menyala!");
+            }
+        }
+
+        function populateSelect(id, data, defaultText, templateFn) {
+            const el = document.getElementById(id);
+            el.innerHTML = `<option value="">-- ${defaultText} --</option>` + data.map(templateFn).join('');
+        }
+
+        // --- Fetch Roster & Buat Checkbox (Pilih 5 Pemain) ---
+        async function loadRoster(teamCode) {
+            const selectEl = document.getElementById(`selectTeam${teamCode}`);
+            const teamId = selectEl.value;
+            const rosterContainer = document.getElementById(`roster${teamCode}`);
+
+            if (!teamId) {
+                rosterContainer.innerHTML = "Roster akan muncul di sini...";
+                return;
+            }
+
+            rosterContainer.innerHTML = "Memuat roster...";
+            try {
+                const res = await fetch(`http://localhost:3000/api/players/${teamId}`);
+                const players = await res.json();
+                
+                if(players.length === 0) {
+                    rosterContainer.innerHTML = "<span style='color:#ef4444'>Pemain belum didaftarkan di Master Data!</span>";
+                    return;
+                }
+
+                // Tampilkan roster dengan Checkbox
+                rosterContainer.innerHTML = `
+                    <div style="margin-bottom: 8px; color: #eab308; font-weight: bold; font-size: 11px;">
+                        PILIH 5 PEMAIN (STARTING LINE-UP):
+                    </div>
+                ` + players.map(p => `
+                    <label class="roster-item" style="cursor: pointer; display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
+                        <input type="checkbox" class="cb-roster-${teamCode}" value="${p.ign}" data-role="${p.main_role}" onchange="cekLimit(event, '${teamCode}')">
+                        <span style="font-weight: bold; color: white;">${p.ign}</span>
+                        <span style="color:#94a3b8; font-size:10px;">(${p.main_role})</span>
+                    </label>
+                `).join('');
+
+            } catch(e) {
+                rosterContainer.innerHTML = "Gagal memuat roster.";
+            }
+        }
+
+        // Fungsi agar tidak bisa centang lebih dari 5
+        function cekLimit(event, teamCode) {
+            const checkedBoxes = document.querySelectorAll(`.cb-roster-${teamCode}:checked`);
+            if (checkedBoxes.length > 5) {
+                alert("Maksimal hanya 5 pemain yang bisa bermain!");
+                event.target.checked = false; // Batalkan centang
+            }
+        }
+
+        function mulaiMatch() {
+            // 1. Ambil nilai dasar
+            const compId = document.getElementById('selectComp').value;
+            const patchId = document.getElementById('selectPatch').value;
+            const teamAId = document.getElementById('selectTeamA').value;
+            const teamBId = document.getElementById('selectTeamB').value;
+            const teamAName = document.getElementById('selectTeamA').options[document.getElementById('selectTeamA').selectedIndex]?.getAttribute('data-name');
+            const teamBName = document.getElementById('selectTeamB').options[document.getElementById('selectTeamB').selectedIndex]?.getAttribute('data-name');
+            
+            const matchDate = document.getElementById('matchDate').value;
+            const matchTime = document.getElementById('matchTime').value;
+
+            // 2. Validasi Input Dropdown & Teks
+            if(!compId || !patchId || !teamAId || !teamBId) return alert("Harap lengkapi semua Dropdown (Kompetisi, Patch, Tim)!");
+            if(teamAId === teamBId) return alert("Tim A dan Tim B tidak boleh sama!");
+            
+            if(!matchDate) return alert("Harap isi Tanggal Pertandingan!");
+            
+            // KODE BARU: Validasi Waktu Wajib Diisi (Anti-Collision Series)
+            if(!matchTime) {
+                alert("Harap isi Jam Pertandingan (Waktu) terlebih dahulu!\nIni penting agar sistem bisa menyimpan dan membedakan riwayat series dengan benar.");
+                document.getElementById('matchTime').focus();
+                return;
+            }
+
+            // 3. Mengambil nama dan role pemain yang di-centang
+            const checkedA = Array.from(document.querySelectorAll(`.cb-roster-A:checked`)).map(cb => {
+                return { ign: cb.value, role: cb.getAttribute('data-role') };
+            });
+            const checkedB = Array.from(document.querySelectorAll(`.cb-roster-B:checked`)).map(cb => {
+                return { ign: cb.value, role: cb.getAttribute('data-role') };
+            });
+
+            // 4. Validasi 5 Pemain
+            if(checkedA.length !== 5) return alert(`Tim Home (A) baru memilih ${checkedA.length} pemain. Wajib 5 pemain!`);
+            if(checkedB.length !== 5) return alert(`Tim Away (B) baru memilih ${checkedB.length} pemain. Wajib 5 pemain!`);
+
+            // 5. Susun Payload
+            const payload = {
+                competitionId: compId, patchId: patchId,
+                matchDate: matchDate,
+                matchTime: matchTime,
+                teamAId: teamAId, teamBId: teamBId,
+                teamA: teamAName, teamB: teamBName,
+                playersA: checkedA, 
+                playersB: checkedB,
+                
+                // Data Manajemen Series
+                matchFormat: parseInt(document.getElementById('matchFormat').value),
+                map: document.getElementById('selectMap').value,
+                firstPick: document.getElementById('firstPick').value,
+                currentGame: 1,
+                seriesScoreA: 0,
+                seriesScoreB: 0
+            };
+
+            // 6. Simpan Setup dan Bersihkan Data Lama
+            localStorage.setItem('matchSetup', JSON.stringify(payload));
+            
+            // KODE BARU: Hapus sisa draft game sebelumnya agar tidak bentrok
+            localStorage.removeItem('draftHasil'); 
+
+            // 7. Pindah Layar
+            window.location.href = 'simulator.html';
+        }
+
+        window.onload = fetchDropdowns;
+    </script>
+</body>
+</html>

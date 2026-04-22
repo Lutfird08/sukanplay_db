@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>SukanPlay - Tournament Portal</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { margin-bottom: 30px; text-align: center; color: white; letter-spacing: 2px; }
+        .league-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+        .league-card { 
+            background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; 
+            cursor: pointer; border: 1px solid #334155; transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .league-card:hover { transform: translateY(-10px); border-color: #3b82f6; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2); }
+        .league-icon { width: 80px; height: 80px; background: #0f172a; border-radius: 50%; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+        .league-name { font-size: 20px; font-weight: bold; margin-bottom: 10px; color: white; }
+        .league-meta { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 PILIH KOMPETISI</h1>
+        <div id="leagueContainer" class="league-grid">
+            </div>
+    </div>
+
+    <script>
+        window.onload = async function() {
+            try {
+                const res = await fetch('http://localhost:3000/api/competitions');
+                const comps = await res.json();
+                const container = document.getElementById('leagueContainer');
+                
+                comps.forEach(c => {
+                    container.innerHTML += `
+                        <div class="league-card" onclick="location.href='kompetisi.html?id=${c.id}'">
+                            <div class="league-icon">🎮</div>
+                            <div class="league-name">${c.name}</div>
+                            <div class="league-meta">${c.region} | TIER ${c.tier}</div>
+                        </div>
+                    `;
+                });
+            } catch (e) { alert("Gagal memuat data kompetisi."); }
+        }
+    </script>
+</body>
+</html>

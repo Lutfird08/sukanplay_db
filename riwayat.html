@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Series Pertandingan</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        .header h1 { color: #f8fafc; font-size: 1.8rem; }
+        .nav-link { color: #3b82f6; text-decoration: none; font-weight: bold; background: #1e293b; padding: 10px 15px; border-radius: 6px; }
+
+        /* Grid Series Cards */
+        .series-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .series-card { background: #1e293b; padding: 20px; border-radius: 12px; cursor: pointer; border: 1px solid #334155; transition: transform 0.2s, border-color 0.2s; position: relative;}
+        .series-card:hover { transform: translateY(-5px); border-color: #eab308; }
+        
+        .series-header { display: flex; justify-content: space-between; color: #94a3b8; font-size: 12px; margin-bottom: 20px; font-weight: bold;}
+        .series-score-board { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        .team-name { font-weight: bold; font-size: 18px; width: 40%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .series-score { font-size: 26px; font-weight: bold; color: white; background: #0f172a; padding: 5px 20px; border-radius: 8px; border: 1px solid #eab308; box-shadow: 0 4px 10px rgba(0,0,0,0.5);}
+        
+        .series-footer { text-align: center; color: #64748b; font-size: 13px; border-top: 1px dashed #334155; padding-top: 10px; }
+
+        /* Modal Details */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 20px;}
+        .modal-content { background: #1e293b; width: 100%; max-width: 700px; max-height: 90vh; border-radius: 12px; border-top: 4px solid #eab308; display: flex; flex-direction: column;}
+        .modal-header { padding: 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; overflow-y: auto; }
+        
+        .game-detail-card { background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #3b82f6; }
+        .game-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; color: white; font-size: 16px;}
+        
+        /* Desain Hero & Kill */
+        .game-stats-container { background: #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 10px;}
+        .game-kills { color: #cbd5e1; font-size: 14px; text-align: center; font-family: monospace; font-size: 16px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #334155;}
+        .hero-draft-flex { display: flex; justify-content: space-between; font-size: 12px; align-items: flex-start;}
+        .hero-col { display: flex; flex-wrap: wrap; gap: 4px; width: 45%; }
+        .hero-badge { padding: 3px 8px; border-radius: 4px; background: #0f172a; font-weight: bold;}
+        .home-hero { color: #93c5fd; border: 1px solid #3b82f6;}
+        .away-hero { color: #fca5a5; border: 1px solid #ef4444;}
+        
+        .game-notes { color: #94a3b8; font-size: 13px; font-style: italic; background: #1e293b; padding: 10px; border-radius: 4px; line-height: 1.5; }
+        
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s;}
+        .btn-delete:hover { background: #dc2626; }
+        .btn-delete-series { background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; margin-right: 15px; transition: 0.2s;}
+        .btn-delete-series:hover { background: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>📜 Riwayat Series (BOx)</h1>
+            <div>
+                <a href="dashboard.html" class="nav-link" style="margin-right: 10px;">📊 Analytics</a>
+                <a href="index.html" class="nav-link">⬅ Menu Utama</a>
+            </div>
+        </div>
+
+        <div id="loadingText" style="text-align: center; color: #94a3b8; padding: 40px;">Mengambil data dari server...</div>
+        <div id="seriesContainer" class="series-grid"></div>
+    </div>
+
+    <div class="modal" id="seriesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalSeriesTitle" style="color: white; font-size: 20px;">Detail Match</h2>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <button id="btnHapusSeries" class="btn-delete-series">🗑️ Hapus Seluruh Series</button>
+                    <button onclick="tutupModal()" style="background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer;">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="modalGamesContainer">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        let globalSeriesData = []; 
+
+        window.onload = async function() {
+            await fetchRiwayat();
+        };
+
+        async function fetchRiwayat() {
+            try {
+                const response = await fetch('http://localhost:3000/api/history');
+                const data = await response.json();
+                
+                document.getElementById('loadingText').style.display = 'none';
+
+                if(data.length === 0) {
+                    document.getElementById('seriesContainer').innerHTML = "<div style='grid-column: 1/-1; text-align:center; color:#64748b;'>Belum ada riwayat pertandingan.</div>";
+                    return;
+                }
+
+                const sortedData = data.reverse(); 
+                const seriesMap = {};
+
+                sortedData.forEach(match => {
+                    // PERBAIKAN: Tambahkan match_time sebagai pembeda unik (Anti-Collision)
+                const key = `${match.competition_name}_${match.team_a_name}_${match.team_b_name}_${match.formatted_date}_${match.match_time}`;
+                    if(!seriesMap[key]) {
+                        seriesMap[key] = {
+                            key: key,
+                            comp: match.competition_name,
+                            date: match.formatted_date,
+                            teamA: match.team_a_name,
+                            teamB: match.team_b_name,
+                            scoreA: 0, 
+                            scoreB: 0,
+                            games: []  
+                        };
+                    }
+                    
+                    if (match.winner_name === match.team_a_name) seriesMap[key].scoreA++;
+                    else if (match.winner_name === match.team_b_name) seriesMap[key].scoreB++;
+                    
+                    seriesMap[key].games.push(match);
+                });
+
+                globalSeriesData = Object.values(seriesMap).reverse();
+                renderSeriesCards();
+
+            } catch (error) {
+                console.error("Gagal mengambil riwayat:", error);
+                document.getElementById('loadingText').innerText = "Gagal terhubung ke database MySQL.";
+            }
+        }
+
+        function renderSeriesCards() {
+            const container = document.getElementById('seriesContainer');
+            container.innerHTML = '';
+
+            globalSeriesData.forEach(series => {
+                let colorA = series.scoreA > series.scoreB ? '#10b981' : '#3b82f6';
+                let colorB = series.scoreB > series.scoreA ? '#10b981' : '#ef4444';
+
+                container.innerHTML += `
+                    <div class="series-card" onclick="bukaDetailSeries('${series.key}')">
+                        <div class="series-header">
+                            <span>🏆 ${series.comp}</span>
+                            <span>📅 ${series.date}</span>
+                        </div>
+                        <div class="series-score-board">
+                            <div class="team-name" style="color: ${colorA};">${series.teamA}</div>
+                            <div class="series-score">${series.scoreA} - ${series.scoreB}</div>
+                            <div class="team-name" style="color: ${colorB};">${series.teamB}</div>
+                        </div>
+                        <div class="series-footer">
+                            👁️ Klik untuk melihat detail ${series.games.length} Game
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function bukaDetailSeries(seriesKey) {
+            const series = globalSeriesData.find(s => s.key === seriesKey);
+            if(!series) return;
+
+            document.getElementById('modalSeriesTitle').innerHTML = `
+                <span style="color:#3b82f6">${series.teamA}</span> vs <span style="color:#ef4444">${series.teamB}</span>
+                <div style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-top:5px;">🏆 ${series.comp} | 📅 ${series.date}</div>
+            `;
+
+            // Sambungkan event onclick ke tombol Hapus Seluruh Series
+            document.getElementById('btnHapusSeries').onclick = function() { hapusSeriesKeseluruhan(seriesKey); };
+
+            const container = document.getElementById('modalGamesContainer');
+            container.innerHTML = '';
+
+            series.games.forEach((g, index) => {
+                let gameTitle = `Game ${index + 1}`;
+                let mapName = "Unknown Map";
+                let cleanNotes = g.notes || "Tidak ada catatan.";
+                
+                const matchRegex = cleanNotes.match(/\[Game \d+ \| Map: (.*?)\]/);
+                if (matchRegex) {
+                    mapName = matchRegex[1];
+                    cleanNotes = cleanNotes.replace(/\[Game \d+ \| Map: .*?\]/, '').trim();
+                }
+
+                const isHomeWin = g.winner_name === g.team_a_name;
+                const winnerColor = isHomeWin ? '#3b82f6' : '#ef4444';
+
+                // Pisahkan Hero menjadi Array HTML Badges
+                const arrHeroesA = g.team_a_heroes ? g.team_a_heroes.split(',').map(h => `<span class="hero-badge home-hero">${h.trim()}</span>`).join('') : '<span style="color:#64748b">-</span>';
+                const arrHeroesB = g.team_b_heroes ? g.team_b_heroes.split(',').map(h => `<span class="hero-badge away-hero">${h.trim()}</span>`).join('') : '<span style="color:#64748b">-</span>';
+
+                container.innerHTML += `
+                    <div class="game-detail-card" style="border-left-color: ${winnerColor}">
+                        <div class="game-header">
+                            <div>🎮 ${gameTitle} <span style="font-size:12px; color:#94a3b8; font-weight:normal;">(Map: ${mapName})</span></div>
+                            <div style="font-size: 14px;">Pemenang: <span style="color: ${winnerColor}; font-weight:900;">${g.winner_name || 'Draw'}</span></div>
+                        </div>
+                        
+                        <div class="game-stats-container">
+                            <div class="game-kills">
+                                <span style="color:#3b82f6; font-size:12px;">KILL HOME</span> 
+                                <span style="color:white; margin: 0 10px;">${g.score_a} - ${g.score_b}</span> 
+                                <span style="color:#ef4444; font-size:12px;">KILL AWAY</span>
+                            </div>
+                            
+                            <div class="hero-draft-flex">
+                                <div class="hero-col" style="justify-content: flex-end;">${arrHeroesA}</div>
+                                <div style="color:#64748b; font-weight:bold; font-size:14px; margin:0 10px; align-self: center;">VS</div>
+                                <div class="hero-col" style="justify-content: flex-start;">${arrHeroesB}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="game-notes">📝 Catatan: ${cleanNotes || '-'}</div>
+                        
+                        <div style="text-align: right; margin-top: 15px; border-top: 1px dashed #334155; padding-top: 10px;">
+                            <button onclick="hapusGameSingkat(${g.id})" class="btn-delete">🗑️ Hapus Game Ini Saja</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('seriesModal').style.display = 'flex';
+        }
+
+        async function hapusGameSingkat(matchId) {
+            const konfirmasi = confirm("Yakin ingin menghapus Game ini secara permanen dari database?");
+            if(!konfirmasi) return;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/match/${matchId}`, { method: 'DELETE' });
+                if(response.ok) {
+                    tutupModal();
+                    document.getElementById('seriesContainer').innerHTML = "<div style='text-align:center; color:#eab308;'>Memuat ulang data...</div>";
+                    await fetchRiwayat(); 
+                } else alert("Gagal menghapus pertandingan.");
+            } catch (error) {
+                console.error("Error Delete:", error);
+                alert("Terjadi kesalahan koneksi.");
+            }
+        }
+
+        // FUNGSI BARU: Menghapus Seluruh Game dalam 1 Series Sekaligus
+        async function hapusSeriesKeseluruhan(seriesKey) {
+            const series = globalSeriesData.find(s => s.key === seriesKey);
+            if(!series) return;
+
+            const konfirmasi = confirm(`🚨 PERINGATAN BAAHAYA 🚨\n\nAnda akan menghapus SELURUH GAME (${series.games.length} match) dari series ${series.teamA} vs ${series.teamB} secara permanen!\n\nLanjutkan?`);
+            if(!konfirmasi) return;
+
+            try {
+                // Loop untuk menghapus semua game secara paralel (bersamaan)
+                const deletePromises = series.games.map(g => 
+                    fetch(`http://localhost:3000/api/match/${g.id}`, { method: 'DELETE' })
+                );
+                
+                await Promise.all(deletePromises);
+                
+                alert("Satu Series penuh berhasil dihapus tanpa sisa!");
+                tutupModal();
+                document.getElementById('seriesContainer').innerHTML = "<div style='text-align:center; color:#ef4444;'>Menyapu bersih data...</div>";
+                await fetchRiwayat(); 
+
+            } catch (error) {
+                console.error("Error Delete Series:", error);
+                alert("Terjadi kesalahan saat menghapus series.");
+            }
+        }
+
+        function tutupModal() {
+            document.getElementById('seriesModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

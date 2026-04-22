@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Quick Data Collect</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; border-top: 4px solid #10b981; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        .header h1 { color: #10b981; font-size: 1.8rem; }
+        .nav-link { color: #3b82f6; text-decoration: none; font-weight: bold; background: #0f172a; padding: 10px 15px; border-radius: 6px; }
+
+        .form-section { background: #0f172a; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+        .section-title { color: #94a3b8; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; font-weight: bold; letter-spacing: 1px; border-bottom: 1px dashed #334155; padding-bottom: 5px;}
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #cbd5e1; font-size: 13px; font-weight: bold; }
+        select, input[type="date"], input[type="time"], input[type="number"], input[type="text"] { width: 100%; padding: 10px; background: #1e293b; border: 1px solid #3b82f6; color: white; border-radius: 6px; }
+        
+        .draft-input { font-family: monospace; font-size: 14px; border-color: #eab308 !important; }
+        .draft-help { font-size: 11px; color: #64748b; margin-top: 4px; display: block; }
+
+        .btn-submit { width: 100%; padding: 15px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px;}
+        .btn-submit:hover { background: #059669; }
+
+        .home-col { border-left: 3px solid #3b82f6; padding-left: 15px; }
+        .away-col { border-left: 3px solid #ef4444; padding-left: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Quick Data Collect</h1>
+            <div>
+                <a href="dashboard.html" class="nav-link" style="margin-right: 10px;">📊 Dashboard</a>
+                <a href="index.html" class="nav-link">⬅ Ke Live Tracker</a>
+            </div>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Mode Input Cepat: Masukkan data turnamen lama secara manual tanpa melalui sistem Live Tracking.</p>
+
+        <div class="form-section">
+            <div class="section-title">1. Info Pertandingan</div>
+            <div class="grid-4">
+                <div class="form-group"><label>Kompetisi</label><select id="comp"></select></div>
+                <div class="form-group"><label>Patch</label><select id="patch"></select></div>
+                <div class="form-group"><label>Tanggal</label><input type="date" id="date"></div>
+                <div class="form-group"><label>Waktu (Opsional)</label><input type="time" id="time" value="15:00"></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-title">2. Tim & Draft Meta (Pisahkan dengan koma)</div>
+            <div class="grid-2">
+                <div class="home-col">
+                    <div class="form-group"><label style="color:#3b82f6;">Tim Home</label><select id="teamHome"></select></div>
+                    <div class="form-group">
+                        <label>Picks Tim Home</label>
+                        <input type="text" id="picksHome" class="draft-input" placeholder="Contoh: Ling, Fanny, Chou, Kaja, Pharsa">
+                    </div>
+                    <div class="form-group">
+                        <label>Bans Tim Home</label>
+                        <input type="text" id="bansHome" class="draft-input" placeholder="Contoh: Nolan, Joy, Mathilda, Diggie, Angela">
+                        <span class="draft-help">Tulis 3 Ban Phase 1 di awal, 2 Ban Phase 2 di akhir.</span>
+                    </div>
+                </div>
+
+                <div class="away-col">
+                    <div class="form-group"><label style="color:#ef4444;">Tim Away</label><select id="teamAway"></select></div>
+                    <div class="form-group">
+                        <label>Picks Tim Away</label>
+                        <input type="text" id="picksAway" class="draft-input" placeholder="Contoh: Fredrinn, Terizla, Novaria, Brody, Minotaur">
+                    </div>
+                    <div class="form-group">
+                        <label>Bans Tim Away</label>
+                        <input type="text" id="bansAway" class="draft-input" placeholder="Contoh: Wanwan, Guinevere, Bruno, Claude, Irithel">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="border-color: #eab308;">
+            <div class="section-title" style="color: #eab308; border-color: #eab308;">3. Hasil Akhir</div>
+            <div class="grid-4">
+                <div class="form-group">
+                    <label>Pemenang Game</label>
+                    <select id="winner">
+                        <option value="">-- Pilih Pemenang --</option>
+                        <option value="Home">Tim Home</option>
+                        <option value="Away">Tim Away</option>
+                    </select>
+                </div>
+                <div class="form-group"><label style="color:#3b82f6;">Total Kill Home</label><input type="number" id="scoreHome" value="0" min="0"></div>
+                <div class="form-group"><label style="color:#ef4444;">Total Kill Away</label><input type="number" id="scoreAway" value="0" min="0"></div>
+                <div class="form-group"><label>Game Ke- (Seri BOx)</label><input type="text" id="notes" placeholder="Contoh: [Game 1 | Map: Broken Walls]"></div>
+            </div>
+        </div>
+
+        <button class="btn-submit" onclick="simpanQuickData()">🚀 SIMPAN KE DATABASE</button>
+    </div>
+
+    <script>
+        // Set tanggal hari ini sebagai default
+        document.getElementById('date').valueAsDate = new Date();
+
+        window.onload = async function() {
+            await loadMasterData();
+        };
+
+        async function loadMasterData() {
+            try {
+                // Load Competitions
+                const resComp = await fetch('http://localhost:3000/api/competitions');
+                const comps = await resComp.json();
+                comps.forEach(c => document.getElementById('comp').innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+                // Load Patches
+                const resPatch = await fetch('http://localhost:3000/api/patches');
+                const patches = await resPatch.json();
+                patches.forEach(p => document.getElementById('patch').innerHTML += `<option value="${p.id}">${p.version}</option>`);
+
+                // Load Teams
+                const resTeam = await fetch('http://localhost:3000/api/teams');
+                const teams = await resTeam.json();
+                teams.forEach(t => {
+                    document.getElementById('teamHome').innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                    document.getElementById('teamAway').innerHTML += `<option value="${t.id}">${t.name}</option>`;
+                });
+            } catch (error) {
+                alert("Gagal memuat Master Data. Pastikan Server Node.js menyala.");
+            }
+        }
+
+        async function simpanQuickData() {
+            // Validasi Input Dasar
+            const tHomeId = document.getElementById('teamHome').value;
+            const tAwayId = document.getElementById('teamAway').value;
+            const winnerSelect = document.getElementById('winner').value;
+
+            if (tHomeId === tAwayId) return alert("Tim Home dan Away tidak boleh sama!");
+            if (!winnerSelect) return alert("Harap pilih pemenang pertandingan!");
+
+            // Penentuan ID Pemenang
+            const winnerId = (winnerSelect === 'Home') ? tHomeId : tAwayId;
+
+            // Konstruksi Payload untuk API
+            const payload = {
+                competitionId: document.getElementById('comp').value,
+                patchId: document.getElementById('patch').value,
+                matchDate: document.getElementById('date').value,
+                matchTime: document.getElementById('time').value,
+                teamAId: tHomeId,
+                teamBId: tAwayId,
+                teamAHeroes: document.getElementById('picksHome').value,
+                teamBHeroes: document.getElementById('picksAway').value,
+                teamABans: document.getElementById('bansHome').value,
+                teamBBans: document.getElementById('bansAway').value,
+                scoreA: document.getElementById('scoreHome').value,
+                scoreB: document.getElementById('scoreAway').value,
+                winnerId: winnerId,
+                notes: document.getElementById('notes').value,
+                
+                // Kosongkan detail yang tidak relevan untuk quick input
+                timelineEvents: [],
+                playerStats: [],
+                teamKills: document.getElementById('scoreHome').value,
+                teamDeaths: document.getElementById('scoreAway').value,
+                teamAssists: 0 
+            };
+
+            // Kirim ke Database
+            try {
+                const response = await fetch('http://localhost:3000/api/simpan-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    alert('Berhasil! Data telah ditambahkan ke Dashboard Analytics.');
+                    
+                    // Reset kolom draft agar siap untuk Game selanjutnya
+                    document.getElementById('picksHome').value = '';
+                    document.getElementById('picksAway').value = '';
+                    document.getElementById('bansHome').value = '';
+                    document.getElementById('bansAway').value = '';
+                    document.getElementById('scoreHome').value = '0';
+                    document.getElementById('scoreAway').value = '0';
+                    document.getElementById('notes').value = '';
+                    
+                    // Fokus ke picks home lagi
+                    document.getElementById('picksHome').focus();
+                } else {
+                    alert('Gagal menyimpan ke database.');
+                }
+            } catch (error) {
+                console.error("Error Simpan:", error);
+                alert('Terjadi kesalahan koneksi.');
+            }
+        }
+    </script>
+</body>
+</html>
