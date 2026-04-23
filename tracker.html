@@ -214,13 +214,18 @@
     <script>
         "use strict";
         
-        // Tambahkan di bagian atas <script> tracker.html
-        let players = [];
-        let skorA = 0, skorB = 0;
-        let timelineEvents = [];
-        
         // ==========================================
-        // INISIALISASI DATA
+        // 1. DEKLARASI VARIABEL GLOBAL (STRICT MODE SAFE)
+        // ==========================================
+        let players = []; 
+        let skorA = 0;
+        let skorB = 0;
+        let timelineEvents = [];
+        let seconds = 0;
+        let timerInterval = null;
+
+        // ==========================================
+        // 2. INISIALISASI DATA LOCALSTORAGE
         // ==========================================
         const roleData = [
             { name: "EXP Lane", icon: "assets/roles/exp.png" },
@@ -231,12 +236,11 @@
         ];
 
         const matchSetup = JSON.parse(localStorage.getItem('matchSetup')) || {};
-        const draftHasil = JSON.parse(localStorage.getItem('draftHasil')) || {};
+        const draftHasil = JSON.parse(localStorage.getItem('draftHasil')) || { teamAHeroes: "", teamBHeroes: "" };
         
-        // SAFEGUARD: Beri nilai default string kosong jika data draft tidak ditemukan
+        // SAFEGUARD: Cegah crash jika draftHasil kosong/di-bypass
         const safeHeroesA = draftHasil.teamAHeroes || "";
         const safeHeroesB = draftHasil.teamBHeroes || "";
-        
         const heroesA = safeHeroesA ? safeHeroesA.split(',').map(h => h.trim()) : [];
         const heroesB = safeHeroesB ? safeHeroesB.split(',').map(h => h.trim()) : [];
 
