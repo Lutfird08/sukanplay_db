@@ -206,6 +206,31 @@
             });
         }
 
+        // FUNGSI BARU: Reset Total Draft
+        function resetDraft() {
+            const yakin = confirm("Yakin ingin mereset seluruh fase Draft?");
+            if (!yakin) return;
+
+            // 1. Kosongkan State Machine
+            draftLog = [];
+            currentStep = 0;
+
+            // 2. Nyalakan kembali semua hero di Hero Pool
+            document.querySelectorAll('.hero-card').forEach(el => {
+                el.classList.remove('disabled');
+            });
+
+            // 3. Reset UI Panel & Search
+            updateSidePanels();
+            updateTurnDisplay();
+            
+            // 4. Sembunyikan tombol lanjut & nyalakan input pencarian
+            document.getElementById('btnLanjut').style.display = 'none';
+            document.getElementById('searchInput').disabled = false;
+            document.getElementById('searchInput').value = '';
+            filterHeroes(); // Reset filter tampilan
+        }
+
         // ==========================================
         // 5. PENYIMPANAN DATA (PERBAIKAN BUG UTAMA)
         // ==========================================
