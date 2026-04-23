@@ -686,10 +686,20 @@
         }
 
         function eksekusiLanjutGame() {
+            // 1. Update parameter untuk Game Berikutnya
             matchSetup.currentGame++;
             matchSetup.map = document.getElementById('nextMap').value;
             matchSetup.firstPick = document.getElementById('nextFirstPick').value;
+            
+            // 2. Simpan setup baru
             localStorage.setItem('matchSetup', JSON.stringify(matchSetup));
+            
+            // 3. PENTING: Bersihkan Draft Lama agar Simulator mulai dari 0
+            localStorage.removeItem('draftHasil');
+            
+            // Note: skorA, skorB, timelineEvents, players, dan seconds 
+            // akan otomatis ter-reset ke 0 karena kita berpindah halaman (Hard Navigation).
+            
             window.location.href = 'simulator.html';
         }
     </script>
