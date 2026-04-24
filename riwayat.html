@@ -109,10 +109,12 @@
                 const sortedData = data.reverse(); 
                 const seriesMap = {};
 
-                sortedData.forEach(match => {
-                    // Kunci Anti-Collision (Menggunakan match_time sebagai pembeda series di hari yang sama)
-                    const key = `${match.competition_name}_${match.team_a_name}_${match.team_b_name}_${match.formatted_date}_${match.match_time}`;
-                    
+                Data.forEach(match => {
+                    // 1. Urutkan nama tim secara abjad agar (RRQ vs ONIC) dan (ONIC vs RRQ) bernilai sama
+                const sortedTeams = [match.team_a_name, match.team_b_name].sort().join('_VS_');
+                
+                // 2. Kunci Grouping Anti-Collision
+                const key = `${match.competition_name}|||${match.formatted_date}|||${match.match_time}|||${sortedTeams}`;
                     if(!seriesMap[key]) {
                         seriesMap[key] = {
                             key: key,
