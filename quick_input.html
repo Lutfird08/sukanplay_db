@@ -178,10 +178,13 @@
             // Kirim ke Database
             try {
                 const response = await fetch('http://localhost:3000/api/simpan-log', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-api-key': 'sukanplay-secret-key-2026' // 👈 TAMBAHKAN KUNCI INI
+                },
+                body: JSON.stringify(payload)
+            });
                 
                 if (response.ok) {
                     alert('Berhasil! Data telah ditambahkan ke Dashboard Analytics.');
