@@ -84,6 +84,9 @@
     </div>
 
     <script>
+        // Gunakan API Key yang sama dengan yang ada di server.js
+        const CLIENT_API_KEY = "sukanplay-secret-key-2026"; 
+
         let globalSeriesData = []; 
 
         window.onload = async function() {
@@ -92,6 +95,7 @@
 
         async function fetchRiwayat() {
             try {
+                // Method GET tidak butuh API Key berdasarkan konfigurasi server kita
                 const response = await fetch('http://localhost:3000/api/history');
                 const data = await response.json();
                 
@@ -106,8 +110,9 @@
                 const seriesMap = {};
 
                 sortedData.forEach(match => {
-                    // PERBAIKAN: Tambahkan match_time sebagai pembeda unik (Anti-Collision)
-                const key = `${match.competition_name}_${match.team_a_name}_${match.team_b_name}_${match.formatted_date}_${match.match_time}`;
+                    // Kunci Anti-Collision (Menggunakan match_time sebagai pembeda series di hari yang sama)
+                    const key = `${match.competition_name}_${match.team_a_name}_${match.team_b_name}_${match.formatted_date}_${match.match_time}`;
+                    
                     if(!seriesMap[key]) {
                         seriesMap[key] = {
                             key: key,
@@ -172,7 +177,6 @@
                 <div style="font-size: 12px; color: #94a3b8; font-weight: normal; margin-top:5px;">🏆 ${series.comp} | 📅 ${series.date}</div>
             `;
 
-            // Sambungkan event onclick ke tombol Hapus Seluruh Series
             document.getElementById('btnHapusSeries').onclick = function() { hapusSeriesKeseluruhan(seriesKey); };
 
             const container = document.getElementById('modalGamesContainer');
@@ -192,7 +196,6 @@
                 const isHomeWin = g.winner_name === g.team_a_name;
                 const winnerColor = isHomeWin ? '#3b82f6' : '#ef4444';
 
-                // Pisahkan Hero menjadi Array HTML Badges
                 const arrHeroesA = g.team_a_heroes ? g.team_a_heroes.split(',').map(h => `<span class="hero-badge home-hero">${h.trim()}</span>`).join('') : '<span style="color:#64748b">-</span>';
                 const arrHeroesB = g.team_b_heroes ? g.team_b_heroes.split(',').map(h => `<span class="hero-badge away-hero">${h.trim()}</span>`).join('') : '<span style="color:#64748b">-</span>';
 
@@ -229,35 +232,48 @@
             document.getElementById('seriesModal').style.display = 'flex';
         }
 
+        // ========================================================
+        // 🛡️ API HAPUS (DILENGKAPI API KEY HEADERS)
+        // ========================================================
+
         async function hapusGameSingkat(matchId) {
             const konfirmasi = confirm("Yakin ingin menghapus Game ini secara permanen dari database?");
             if(!konfirmasi) return;
 
             try {
-                const response = await fetch(`http://localhost:3000/api/match/${matchId}`, { method: 'DELETE' });
+                const response = await fetch(`http://localhost:3000/api/match/${matchId}`, { 
+                    method: 'DELETE',
+                    headers: { 'x-api-key': CLIENT_API_KEY } // 👈 KUNCI KEAMANAN DITAMBAHKAN
+                });
+
                 if(response.ok) {
                     tutupModal();
                     document.getElementById('seriesContainer').innerHTML = "<div style='text-align:center; color:#eab308;'>Memuat ulang data...</div>";
                     await fetchRiwayat(); 
-                } else alert("Gagal menghapus pertandingan.");
+                } else {
+                    const errMsg = await response.json();
+                    alert("Gagal menghapus: " + (errMsg.error || 'Server error'));
+                }
             } catch (error) {
                 console.error("Error Delete:", error);
                 alert("Terjadi kesalahan koneksi.");
             }
         }
 
-        // FUNGSI BARU: Menghapus Seluruh Game dalam 1 Series Sekaligus
         async function hapusSeriesKeseluruhan(seriesKey) {
             const series = globalSeriesData.find(s => s.key === seriesKey);
             if(!series) return;
 
-            const konfirmasi = confirm(`🚨 PERINGATAN BAAHAYA 🚨\n\nAnda akan menghapus SELURUH GAME (${series.games.length} match) dari series ${series.teamA} vs ${series.teamB} secara permanen!\n\nLanjutkan?`);
+            const konfirmasi = confirm(`🚨 PERINGATAN BAHAYA 🚨\n\nAnda akan menghapus SELURUH GAME (${series.games.length} match) dari series ${series.teamA} vs ${series.teamB} secara permanen!\n\nLanjutkan?`);
             if(!konfirmasi) return;
 
             try {
-                // Loop untuk menghapus semua game secara paralel (bersamaan)
+                // Loop untuk menghapus semua game dengan menembak API Key
                 const deletePromises = series.games.map(g => 
-                    fetch(`http://localhost:3000/api/match/${g.id}`, { method: 'DELETE' })
+                    fetch(`http://localhost:3000/api/match/${g.id}`, { 
+                        method: 'DELETE',
+                        headers: { 'x-api-key': CLIENT_API_KEY } // 👈 KUNCI KEAMANAN DITAMBAHKAN
+                    })
                 );
                 
                 await Promise.all(deletePromises);
@@ -275,73 +291,6 @@
 
         function tutupModal() {
             document.getElementById('seriesModal').style.display = 'none';
-        }
-        
-        // Asumsi 'data' adalah array hasil balasan dari API server.js
-        function renderHistory(data) {
-            // 1. Lakukan Grouping dengan reduce
-            const groupedMatches = data.reduce((acc, match) => {
-                
-                // TRIK RAHASIA: Urutkan nama tim sesuai abjad (A-Z).
-                // Ini memastikan (EVOS vs RRQ) dan (RRQ vs EVOS) akan menghasilkan string yang sama persis.
-            const sortedTeams = [match.team_a_name, match.team_b_name].sort().join(' vs ');
-
-                // Buat kunci unik untuk series ini
-                // Contoh hasil: "22 Apr 2026_MPL Season 13_EVOS vs RRQ"
-            const seriesKey = `${match.formatted_date}_${match.competition_name}_${sortedTeams}`;
-
-                // Jika kunci belum ada di object, buat array kosong
-                if (!acc[seriesKey]) {
-                    acc[seriesKey] = {
-                        title: `${match.competition_name} - ${match.formatted_date}`,
-                        matchup: sortedTeams,
-                        games: []
-                    };
-                }
-
-                // Masukkan data match ke dalam array games di series tersebut
-                acc[seriesKey].games.push(match);
-
-                return acc;
-            }, {});
-
-            // 2. Tampilkan ke HTML (Contoh implementasi)
-            const container = document.getElementById('historyContainer');
-            container.innerHTML = '';
-
-            // Looping object hasil grouping tadi
-            Object.values(groupedMatches).forEach(series => {
-                // Buat elemen pembungkus untuk 1 Series (BO3/BO5)
-                const seriesCard = document.createElement('div');
-                seriesCard.className = 'series-card';
-                
-                // Header Series (Bisa dipakai sebagai judul card)
-                seriesCard.innerHTML = `
-                    <h3>${series.title}</h3>
-                    <h4>${series.matchup}</h4>
-                    <div class="games-list"></div>
-                `;
-
-                const gamesList = seriesCard.querySelector('.games-list');
-
-                // Looping setiap game (Game 1, Game 2, dst) di dalam series tersebut
-                series.games.forEach((game, index) => {
-                    // Karena kita mengambil data history ORDER BY match_time DESC di backend,
-                    // index 0 biasanya adalah game terakhir (misal Game 3). 
-                    // Jika ingin urut Game 1 -> Game 3, gunakan reverse() sebelum forEach.
-                    
-                    const gameItem = document.createElement('div');
-                    gameItem.className = 'game-item';
-                    gameItem.innerHTML = `
-                        <p><strong>Game:</strong> ${game.team_a_name} (${game.score_a}) vs (${game.score_b}) ${game.team_b_name}</p>
-                        <p>Pemenang: ${game.winner_name || 'Belum Ditentukan'}</p>
-                        <p>Waktu: ${game.match_time}</p>
-                    `;
-                    gamesList.appendChild(gameItem);
-                });
-
-                container.appendChild(seriesCard);
-            });
         }
     </script>
 </body>
