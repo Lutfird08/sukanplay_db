@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Admin - Input Jadwal Turnamen</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0f172a; color: #e2e8f0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; border-top: 4px solid #8b5cf6; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+        .header h1 { color: #a78bfa; font-size: 1.8rem; }
+        .nav-link { color: #3b82f6; text-decoration: none; font-weight: bold; background: #0f172a; padding: 10px 15px; border-radius: 6px; }
+
+        .form-section { background: #0f172a; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #334155; }
+        .section-title { color: #94a3b8; font-size: 14px; text-transform: uppercase; margin-bottom: 15px; font-weight: bold; letter-spacing: 1px; border-bottom: 1px dashed #334155; padding-bottom: 5px;}
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #cbd5e1; font-size: 13px; font-weight: bold; }
+        select, input[type="date"], input[type="number"] { width: 100%; padding: 10px; background: #1e293b; border: 1px solid #8b5cf6; color: white; border-radius: 6px; outline: none;}
+        
+        /* Dynamic Row Design */
+        .match-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #3b82f6;}
+        .match-row select { border-color: #3b82f6; }
+        .btn-remove { background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; height: 40px;}
+        .btn-remove:hover { background: #dc2626; }
+
+        .btn-add { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 20px;}
+        .btn-add:hover { background: #2563eb; }
+
+        .btn-submit { width: 100%; padding: 15px; background: #8b5cf6; color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px;}
+        .btn-submit:hover { background: #7c3aed; }
+        
+        .team-vs { text-align: center; font-weight: bold; color: #64748b; font-size: 12px; padding-bottom: 12px;}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Bulk Input Jadwal</h1>
+            <div>
+                <a href="home.html" class="nav-link">⬅ Ke Portal Utama</a>
+            </div>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Masukkan banyak jadwal sekaligus untuk satu minggu (Week) tertentu. Sistem akan otomatis menyimpannya ke database.</p>
+
+        <div class="form-section">
+            <div class="section-title">1. Pengaturan Minggu (Global)</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Kompetisi</label>
+                    <select id="globalComp"><option value="">Memuat...</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Week Ke-</label>
+                    <input type="number" id="globalWeek" value="1" min="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" style="border-color: #3b82f6;">
+            <div class="section-title" style="color: #3b82f6; border-color: #3b82f6;">2. Daftar Pertandingan</div>
+            
+            <div id="matchRowsContainer">
+                </div>
+
+            <button class="btn-add" onclick="tambahBaris()">➕ Tambah Baris Match</button>
+        </div>
+
+        <button class="btn-submit" onclick="simpanJadwalMassal()">🚀 SIMPAN SELURUH JADWAL KE DATABASE</button>
+    </div>
+
+    <script>
+        const CLIENT_API_KEY = "sukanplay-secret-key-2026"; // Kunci untuk menembus server.js
+        let teamsData = []; // Menyimpan data tim untuk dropdown dinamis
+
+        window.onload = async function() {
+            await loadMasterData();
+            tambahBaris(); // Munculkan 1 baris kosong secara default
+        };
+
+        async function loadMasterData() {
+            try {
+                // Load Competitions
+                const resComp = await fetch('http://localhost:3000/api/competitions');
+                const comps = await resComp.json();
+                const compSelect = document.getElementById('globalComp');
+                compSelect.innerHTML = '<option value="">-- Pilih Kompetisi --</option>';
+                comps.forEach(c => compSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+                // Load Teams
+                const resTeam = await fetch('http://localhost:3000/api/teams');
+                teamsData = await resTeam.json();
+            } catch (error) {
+                alert("Gagal memuat Master Data. Pastikan Server Node.js menyala.");
+            }
+        }
+
+        // Fungsi untuk menambahkan baris form dinamis
+        function tambahBaris() {
+            const container = document.getElementById('matchRowsContainer');
+            const rowId = `row_${Date.now()}`; // Buat ID unik berdasarkan waktu
+            
+            // Buat HTML untuk opsi tim
+            let teamOptions = '<option value="">-- Pilih Tim --</option>';
+            teamsData.forEach(t => teamOptions += `<option value="${t.id}">${t.name}</option>`);
+
+            const rowHTML = `
+                <div class="match-row" id="${rowId}">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Tanggal Match</label>
+                        <input type="date" class="input-date" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="color:#3b82f6;">Tim Home</label>
+                        <select class="input-home" required>${teamOptions}</select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="color:#ef4444;">Tim Away</label>
+                        <select class="input-away" required>${teamOptions}</select>
+                    </div>
+                    <button class="btn-remove" onclick="hapusBaris('${rowId}')">X</button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', rowHTML);
+            
+            // Set default tanggal ke hari ini untuk baris yang baru ditambahkan
+            const newRow = document.getElementById(rowId);
+            newRow.querySelector('.input-date').valueAsDate = new Date();
+        }
+
+        function hapusBaris(rowId) {
+            const row = document.getElementById(rowId);
+            if(row) row.remove();
+        }
+
+        // Fungsi pamungkas untuk mengirim data secara massal
+        async function simpanJadwalMassal() {
+            const compId = document.getElementById('globalComp').value;
+            const weekNum = document.getElementById('globalWeek').value;
+
+            if (!compId) return alert("Harap pilih Kompetisi terlebih dahulu!");
+            if (!weekNum || weekNum < 1) return alert("Harap isi Week ke-berapa yang valid!");
+
+            const rows = document.querySelectorAll('.match-row');
+            if (rows.length === 0) return alert("Tambahkan minimal 1 pertandingan!");
+
+            // Kumpulkan data dari setiap baris
+            const payloads = [];
+            let adaErrorInput = false;
+
+            rows.forEach((row, index) => {
+                const date = row.querySelector('.input-date').value;
+                const homeId = row.querySelector('.input-home').value;
+                const awayId = row.querySelector('.input-away').value;
+
+                if (!date || !homeId || !awayId) {
+                    alert(`Baris ke-${index + 1} belum lengkap!`);
+                    adaErrorInput = true;
+                    return;
+                }
+                
+                if (homeId === awayId) {
+                    alert(`Baris ke-${index + 1}: Tim Home dan Away tidak boleh sama!`);
+                    adaErrorInput = true;
+                    return;
+                }
+
+                payloads.push({
+                    competition_id: compId,
+                    week_number: weekNum,
+                    match_date: date,
+                    team_home_id: homeId,
+                    team_away_id: awayId
+                });
+            });
+
+            if (adaErrorInput) return; // Hentikan jika ada form yang tidak valid
+
+            const konfirmasi = confirm(`Anda akan menyimpan ${payloads.length} pertandingan untuk Week ${weekNum}. Lanjutkan?`);
+            if (!konfirmasi) return;
+
+            try {
+                document.querySelector('.btn-submit').innerText = "⏳ MENYIMPAN DATA...";
+                
+                // Gunakan Promise.all untuk mengirim banyak data POST secara paralel (bersamaan)
+                const fetchPromises = payloads.map(payload => 
+                    fetch('http://localhost:3000/api/schedules', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'x-api-key': CLIENT_API_KEY // 🛡️ Penjaga Gerbang API
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                );
+
+                const responses = await Promise.all(fetchPromises);
+                
+                // Cek apakah ada request yang gagal
+                const gagal = responses.filter(r => !r.ok);
+                if (gagal.length > 0) {
+                    throw new Error(`Beberapa data gagal disimpan (${gagal.length} error).`);
+                }
+
+                alert("✅ Semua jadwal berhasil ditambahkan ke database!");
+                
+                // Reset form kembali bersih
+                document.getElementById('matchRowsContainer').innerHTML = '';
+                tambahBaris(); 
+                document.querySelector('.btn-submit').innerText = "🚀 SIMPAN SELURUH JADWAL KE DATABASE";
+
+            } catch (error) {
+                console.error("Error Bulk Insert:", error);
+                alert("Terjadi kesalahan saat menyimpan jadwal. Cek console untuk detail.");
+                document.querySelector('.btn-submit').innerText = "🚀 SIMPAN SELURUH JADWAL KE DATABASE";
+            }
+        }
+    </script>
+</body>
+</html>
