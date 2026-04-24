@@ -601,51 +601,52 @@
             document.getElementById('reviewModal').style.display = 'flex';
         }
 
+        // ========================================================
+        // FUNGSI SIMPAN DAN LANJUT (DILENGKAPI API KEY & SCHEDULE UPDATE)
+        // ========================================================
         async function simpanDanLanjutSeries() {
-            const pemenangSelect = document.getElementById('pemenangMatch').value;
-            if (!pemenangSelect) {
-                alert("Harap pilih Tim yang menghancurkan base (Pemenang Game) sebelum menyimpan!");
-                document.getElementById('reviewModal').style.display = 'none';
-                return;
-            }
+            // 1. Tentukan siapa pemenang Game ini berdasarkan dropdown modal
+            const pemenangSelect = document.getElementById('winnerSelect').value;
+            const pemenangID = pemenangSelect === 'A' ? matchSetup.teamAId : matchSetup.teamBId;
 
-            timelineEvents.forEach((ev, idx) => {
-                const inputEl = document.getElementById(`editLogText_${idx}`);
-                if (inputEl) {
-                    timelineEvents[idx].event = inputEl.value;
-                    if(timelineEvents[idx].type === 'Pin') timelineEvents[idx].type = 'Log'; 
-                }
-            });
-
-            let idWinner = null;
-            if (pemenangSelect === 'Tim A') { idWinner = matchSetup.teamAId; matchSetup.seriesScoreA++; } 
-            else if (pemenangSelect === 'Tim B') { idWinner = matchSetup.teamBId; matchSetup.seriesScoreB++; }
-
-            localStorage.setItem('matchSetup', JSON.stringify(matchSetup));
-
+            // 2. Susun Payload Sesuai Format Database
             const payload = {
-                competitionId: matchSetup.competitionId, 
-                patchId: matchSetup.patchId,             
-                matchDate: matchSetup.matchDate, 
+                competitionId: matchSetup.competitionId,
+                patchId: matchSetup.patchId,
+                matchDate: matchSetup.matchDate,
                 matchTime: matchSetup.matchTime,
-                teamAId: matchSetup.teamAId,             
-                teamBId: matchSetup.teamBId,             
-                teamAHeroes: draftHasil.teamAHeroes, 
-                teamBHeroes: draftHasil.teamBHeroes,
+                teamAId: matchSetup.teamAId,
+                teamBId: matchSetup.teamBId,
+                
+                teamAHeroes: heroesA.join(','),
+                teamBHeroes: heroesB.join(','),
                 teamABans: draftHasil.teamABans || "",
                 teamBBans: draftHasil.teamBBans || "",
-                scoreA: skorA, scoreB: skorB,
-                winnerId: idWinner,
-                notes: `[Game ${matchSetup.currentGame} | Map: ${matchSetup.map}] ` + document.getElementById('notesAkhir').value,
+                
+                // SKOR KILLS (Sesuai dengan klik manual di tracker)
+                scoreA: skorA, 
+                scoreB: skorB, 
+                
+                // PEMENANG GAME (Base Hancur)
+                winnerId: pemenangID, 
+                
+                // CATATAN (Sangat penting untuk Grouping Series)
+                notes: `[Game ${matchSetup.currentGame} | Map: ${matchSetup.map}]`,
+                
+                // DATA STATISTIK DETAIL
                 timelineEvents: timelineEvents,
                 playerStats: players,
-                teamKills: skorA, teamDeaths: skorB, 
-                teamAssists: players.filter(p => p.team === 'A').reduce((sum, p) => sum + p.a, 0)
+                teamKills: skorA,
+                teamDeaths: skorB,
+                teamAssists: players.reduce((sum, p) => sum + p.a, 0)
             };
 
+            const action = document.getElementById('btnLanjutSeries').getAttribute('data-action');
+
             const prosesPindahLayar = () => {
-                const action = document.getElementById('btnLanjutSeries').getAttribute('data-action');
                 if (action === 'end') {
+                    // Hapus status activeScheduleId karena series sudah benar-benar selesai
+                    localStorage.removeItem('activeScheduleId'); 
                     alert('Seri Berakhir! Kembali ke Riwayat.');
                     window.location.href = 'riwayat.html';
                 } else {
@@ -659,31 +660,46 @@
             };
 
             try {
+                // TAHAP 1: Simpan Log Match
                 const response = await fetch('http://localhost:3000/api/simpan-log', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-api-key': 'sukanplay-secret-key-2026' // 👈 TAMBAHKAN KUNCI INI
-                },
-                body: JSON.stringify(payload)
-            });
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-api-key': 'sukanplay-secret-key-2026' // 🛡️ Kunci Keamanan
+                    },
+                    body: JSON.stringify(payload)
+                });
                 
-                if (response.ok) {
-                    prosesPindahLayar(); // Server hidup, eksekusi normal
-                } else {
-                    throw new Error("Server mengembalikan status gagal.");
+                if (!response.ok) throw new Error("Server menolak menyimpan data log.");
+                
+                const result = await response.json(); // Mengandung insertId dari MySQL
+                const activeScheduleId = localStorage.getItem('activeScheduleId');
+
+                // TAHAP 2: Update Status Schedule menjadi "Completed"
+                // Hanya dieksekusi jika match ini berasal dari klik di jadwal (kompetisi.html)
+                if (activeScheduleId) {
+                    await fetch(`http://localhost:3000/api/schedules/${activeScheduleId}/complete`, {
+                        method: 'PUT',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'x-api-key': 'sukanplay-secret-key-2026' // 🛡️ Kunci Keamanan
+                        },
+                        body: JSON.stringify({ match_log_id: result.insertId })
+                    });
                 }
+
+                // TAHAP 3: Lanjut ke layar berikutnya
+                prosesPindahLayar(); 
+
             } catch (error) {
                 console.error("Error Simpan:", error);
                 
-                // OFFLINE FALLBACK: Simpan ke koper darurat di LocalStorage
+                // OFFLINE FALLBACK (Jika internet/server mati)
                 let offlineBackups = JSON.parse(localStorage.getItem('offlineBackups')) || [];
                 offlineBackups.push(payload);
                 localStorage.setItem('offlineBackups', JSON.stringify(offlineBackups));
                 
                 alert('⚠️ Server Offline/Gagal!\nData sementara disimpan di memori perangkat. Anda tetap bisa melanjutkan series.');
-                
-                // Paksa tetap lanjut agar flow turnamen tidak terhenti
                 prosesPindahLayar(); 
             }
         }
