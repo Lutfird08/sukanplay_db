@@ -53,12 +53,8 @@
         let currentWeek = 1;
         let allSchedules = [];
 
+        // PERBAIKAN: Hapus loop 1-9 dari sini, cukup panggil loadSchedules
         window.onload = async function() {
-            // Render tombol Week
-            const nav = document.getElementById('weekNav');
-            for(let i=1; i<=9; i++) {
-                nav.innerHTML += `<button class="week-btn ${i==1?'active':''}" onclick="changeWeek(${i}, this)">Week ${i}</button>`;
-            }
             await loadSchedules();
         }
 
@@ -77,6 +73,26 @@
             try {
                 const res = await fetch(`http://localhost:3000/api/schedules/${compId}`);
                 allSchedules = await res.json();
+                
+                // 3. LOGIKA BARU: Dynamic Week Generation
+                // Mencari angka week_number yang unik (tidak duplikat) dan mengurutkannya
+                const weeks = [...new Set(allSchedules.map(s => s.week_number))].sort((a, b) => a - b);
+                
+                const nav = document.getElementById('weekNav');
+                nav.innerHTML = '';
+                
+                if(weeks.length === 0) {
+                    nav.innerHTML = '<span style="color:#94a3b8;">Belum ada jadwal rilis.</span>';
+                } else {
+                    // Set currentWeek otomatis ke minggu paling awal yang ada di database
+                    currentWeek = weeks[0]; 
+                    
+                    // Buat tombol sesuai jumlah minggu yang ditemukan
+                    weeks.forEach((w, index) => {
+                        nav.innerHTML += `<button class="week-btn ${index === 0 ? 'active' : ''}" onclick="changeWeek(${w}, this)">Week ${w}</button>`;
+                    });
+                }
+                
                 renderMatches();
             } catch (e) {
                 document.getElementById('matchContainer').innerHTML = "<div style='text-align:center; color:#ef4444;'>Gagal memuat jadwal.</div>";
@@ -126,11 +142,8 @@
         }
 
         function mulaiMatch(scheduleId, mode) {
-            // Kita simpan scheduleId di localStorage agar halaman selanjutnya tahu pertandingan mana yang sedang diproses
             localStorage.setItem('activeScheduleId', scheduleId);
-            
             const target = mode === 'live' ? 'index.html' : 'quick_input.html';
-            // Kita juga bisa kirim param di URL
             location.href = target + "?schedule_id=" + scheduleId;
         }
     </script>
