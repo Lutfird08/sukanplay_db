@@ -115,7 +115,6 @@ app.get('/api/schedules/:comp_id', (req, res) => {
     });
 });
 
-// POST Dilindungi API Key
 app.post('/api/schedules', (req, res) => {
     const errorMsg = validateInput(['competition_id', 'week_number', 'match_date', 'team_home_id', 'team_away_id'], req.body);
     if (errorMsg) return res.status(400).json({ error: errorMsg });
@@ -128,17 +127,26 @@ app.post('/api/schedules', (req, res) => {
     });
 });
 
+// PERBAIKAN: API Update Status Jadwal (Dikembalikan)
+app.put('/api/schedules/:id/complete', (req, res) => {
+    const scheduleId = req.params.id;
+    const { match_log_id } = req.body; 
+    const sql = "UPDATE match_schedules SET status = 'Completed', match_log_id = ? WHERE id = ?";
+    db.query(sql, [match_log_id, scheduleId], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Status jadwal berhasil diubah menjadi Completed!" });
+    });
+});
+
 // ==========================================
 // API SIMPAN MATCH LOG (DENGAN VALIDASI KETAT)
 // ==========================================
 app.post('/api/simpan-log', (req, res) => {
     const data = req.body;
 
-    // Validasi Cek Kosong
     const errorMsg = validateInput(['competitionId', 'patchId', 'matchDate', 'teamAId', 'teamBId', 'winnerId'], data);
     if (errorMsg) return res.status(400).json({ error: errorMsg });
 
-    // Validasi Tipe Data (Cegah masuk akal)
     if (isNaN(data.scoreA) || isNaN(data.scoreB)) {
         return res.status(400).json({ error: "Skor A dan Skor B harus berupa angka!" });
     }
@@ -201,8 +209,10 @@ app.delete('/api/match/:id', (req, res) => {
 });
 
 app.get('/api/analytics', (req, res) => {
+    // PERBAIKAN: Menambahkan competition_id dan patch_id untuk fitur Filter
     const sql = `
         SELECT 
+            m.competition_id, m.patch_id,
             m.score_a, m.score_b, m.team_a_heroes, m.team_b_heroes, m.team_a_bans, m.team_b_bans, m.player_stats,
             tA.name AS team_home, tB.name AS team_away, tW.name AS winner_name
         FROM match_logs m
