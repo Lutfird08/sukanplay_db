@@ -127,7 +127,6 @@ app.post('/api/schedules', (req, res) => {
     });
 });
 
-// PERBAIKAN: API Update Status Jadwal (Dikembalikan)
 app.put('/api/schedules/:id/complete', (req, res) => {
     const scheduleId = req.params.id;
     const { match_log_id } = req.body; 
@@ -173,6 +172,7 @@ app.post('/api/simpan-log', (req, res) => {
             console.error("Error Simpan:", err);
             return res.status(500).json({ error: 'Gagal menyimpan data log', details: err.message });
         }
+        // 👇 INSERT ID SUDAH TERSEDIA DI SINI UNTUK MERESPON REQUEST FRONT-END
         res.status(200).json({ message: 'Log berhasil disimpan!', insertId: result.insertId });
     });
 });
@@ -201,15 +201,29 @@ app.get('/api/history', (req, res) => {
     });
 });
 
+// PERBAIKAN: Menangani Foreign Key dari tabel match_schedules saat menghapus match_logs
 app.delete('/api/match/:id', (req, res) => {
-    db.query("DELETE FROM match_logs WHERE id = ?", [req.params.id], (err, result) => {
-        if (err) return res.status(500).json({ error: 'Gagal menghapus data' });
-        res.json({ message: 'Pertandingan berhasil dihapus!' });
+    const matchLogId = req.params.id;
+
+    // Langkah 1: Reset (Nullify) referensi di tabel match_schedules terlebih dahulu
+    const sqlUpdateSchedule = "UPDATE match_schedules SET status = 'Upcoming', match_log_id = NULL WHERE match_log_id = ?";
+    
+    db.query(sqlUpdateSchedule, [matchLogId], (errUpdate) => {
+        if (errUpdate) {
+            console.error("Gagal me-reset jadwal:", errUpdate);
+            // Kita tetap lanjut menghapus log meskipun update jadwal gagal, tapi sebaiknya dicatat
+        }
+
+        // Langkah 2: Eksekusi DELETE dari tabel utama match_logs
+        db.query("DELETE FROM match_logs WHERE id = ?", [matchLogId], (errDelete, result) => {
+            if (errDelete) return res.status(500).json({ error: 'Gagal menghapus data dari match_logs' });
+            
+            res.json({ message: 'Pertandingan berhasil dihapus dan status jadwal dikembalikan ke Upcoming!' });
+        });
     });
 });
 
 app.get('/api/analytics', (req, res) => {
-    // PERBAIKAN: Menambahkan competition_id dan patch_id untuk fitur Filter
     const sql = `
         SELECT 
             m.competition_id, m.patch_id,
